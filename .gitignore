@@ -1,0 +1,13 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+#general
+.vscode/
+__pycache__/
+env/
+logs/
+app.cfg
+db.sqlite3
+elasticsearch-7.13.2/
+ffmpeg-n4.4-79-gde1132a891-win64-gpl-4.4/
+gallery-dl/
+assets/
