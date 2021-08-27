@@ -3,11 +3,11 @@
 #general
 .vscode/
 __pycache__/
-env/
+.venv/
 logs/
 app.cfg
-db.sqlite3
-elasticsearch-7.13.2/
-ffmpeg-n4.4-79-gde1132a891-win64-gpl-4.4/
+*.sqlite3
+ffmpeg*/
 gallery-dl/
 assets/
+test.ipynb

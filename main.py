@@ -5,17 +5,24 @@ import discord
 from datetime import datetime
 import configparser
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     config = configparser.ConfigParser()
-    config.read('app.cfg')
+    config.read("app.cfg")
 
-    logging.basicConfig(filename='./logs/'+util.strftime(datetime.now(),False)+'.log', encoding='utf-8', level=logging.DEBUG,format='%(asctime)s(%(levelname)s) - %(message)s',datefmt='%H:%M:%S')
-    logging.info('DISCORD BOT PROCESS STARTED\n')
+    logging.basicConfig(
+        filename="./logs/" + util.strftime(datetime.now(), False) + ".log",
+        encoding="utf-8",
+        level=logging.DEBUG,
+        format="%(asctime)s(%(levelname)s) - %(message)s",
+        datefmt="%H:%M:%S",
+    )
 
-    command_prefix = '>>'
+    logging.info("DISCORD BOT PROCESS STARTED\n")
+
+    command_prefix = ">>"
     intents = discord.Intents(messages=True, guilds=True)
     activity = discord.Game(name=">>help")
-    bot = discordBot(command_prefix,intents,activity)
+    bot = discordBot(command_prefix, intents, activity)
 
-    bot.run(config['Discord']['Token'])
-    logging.info('DISCORD BOT ENDED\n')
+    bot.run(config["Discord"]["Token"])
+    logging.info("DISCORD BOT ENDED\n")

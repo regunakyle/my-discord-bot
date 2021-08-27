@@ -2,21 +2,22 @@ import sqlite3
 from datetime import datetime
 import logging
 
-class utility():
+
+class utility:
     def __connectDB():
-        cnxn = sqlite3.connect('./db.sqlite3')
+        cnxn = sqlite3.connect("./db.sqlite3")
         cursor = cnxn.cursor()
-        return cnxn,cursor
+        return cnxn, cursor
 
     @classmethod
-    def runSQL(cls,query:str,param = None, rtn = False):
-        cnxn,cursor = cls.__connectDB()
-        
+    def runSQL(cls, query: str, param=None, rtn=False):
+        cnxn, cursor = cls.__connectDB()
+
         try:
             if param is None:
                 cursor.execute(query)
             else:
-                cursor.execute(query,param)
+                cursor.execute(query, param)
         except Exception as e:
             cursor.close()
             cnxn.close()
@@ -35,16 +36,24 @@ class utility():
             cursor.close()
             cnxn.close()
             return results
-            
+
         cnxn.commit()
         cursor.close()
         cnxn.close()
 
-    def strptime(strtime: str,timeIncluded = True):
-        return datetime.strptime(strtime,'%Y-%m-%d %H:%M:%S') if timeIncluded == True else datetime.strptime(strtime,'%Y-%m-%d')
+    def strptime(strtime: str, timeIncluded=True):
+        return (
+            datetime.strptime(strtime, "%Y-%m-%d %H:%M:%S")
+            if timeIncluded == True
+            else datetime.strptime(strtime, "%Y-%m-%d")
+        )
 
-    def strftime(dt: datetime,timeIncluded = True):
-        return datetime.strftime(dt,'%Y-%m-%d %H:%M:%S') if timeIncluded == True else datetime.strftime(dt,'%Y-%m-%d')
+    def strftime(dt: datetime, timeIncluded=True):
+        return (
+            datetime.strftime(dt, "%Y-%m-%d %H:%M:%S")
+            if timeIncluded == True
+            else datetime.strftime(dt, "%Y-%m-%d")
+        )
 
     def print(text: str):
         print(text)
