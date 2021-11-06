@@ -1,17 +1,18 @@
 import discord
 from discord.ext import commands
 from ..utility import utility as util
+import typing as ty
 
 # Reference: https://gist.github.com/InterStella0/b78488fb28cadf279dfd3164b9f0cf96
 class MyHelpCommand(commands.MinimalHelpCommand):
-    def get_command_signature(self, command):
+    def get_command_signature(self, command: commands) -> str:
         return "%s%s %s" % (
             self.clean_prefix,
             command.qualified_name,
             command.signature,
         )
 
-    async def send_bot_help(self, mapping):
+    async def send_bot_help(self, mapping: dict) -> None:
         embed = discord.Embed(title="Help")
         for cog, commands in mapping.items():
             filtered = await self.filter_commands(commands, sort=True)
@@ -27,17 +28,19 @@ class MyHelpCommand(commands.MinimalHelpCommand):
 
 
 class Meta(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._original_help_command = bot.help_command
         bot.help_command = MyHelpCommand()
         bot.help_command.cog = self
 
-    def cog_unload(self):
+    def cog_unload(self) -> None:
         self.bot.help_command = self._original_help_command
 
     @commands.command()
-    async def setBotChannel(self, ctx, unset=None):
+    async def setBotChannel(
+        self, ctx: commands.Context, unset: ty.Optional[str] = None
+    ) -> None:
         """Set the channel for bot notifications."""
         try:
             util.runSQL(

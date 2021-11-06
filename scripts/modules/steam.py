@@ -8,11 +8,11 @@ from discord.ext import commands, tasks
 
 
 class Steam(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.giveawayTask.start()
 
-    def checkGiveaway(self):
+    def checkGiveaway(self) -> None:
         print("Fetching data from isthereanydeal.com...")
         datePattern = re.compile("[eE]xpires? on (\d{4}-\d{2}-\d{2})")
         rss = feedparser.parse("https://isthereanydeal.com/rss/specials/us")
@@ -44,12 +44,12 @@ class Steam(commands.Cog):
                     pass
         print("Check giveaway ended.")
 
-    def getNewGiveaway(self, guildId):
+    def getNewGiveaway(self, guildId: str) -> tuple:
         channel = util.runSQL(
             "select BotChannel from guildInfo where GuildId = ?", [guildId], True
         )[0]["BotChannel"]
         if channel is None:
-            return None, None
+            return (None, None)
         # TODO: Use regex to filter
         results = util.runSQL(
             """
@@ -86,9 +86,9 @@ class Steam(commands.Cog):
         return channel, filteredResults
 
     @commands.command()
-    async def getAllRecord(self, ctx):
+    async def getAllRecord(self, ctx: commands.Context) -> None:
         """List all record in database"""
-        location = "./assets/temp/GiveawayList.csv"
+        location = "./volume/assets/temp/GiveawayList.csv"
         with open(location, "w", newline="") as file:
             writer = csv.writer(file)
             writer.writerow(["Title", "Link", "Publish Time", "Expiry Date"])
@@ -112,7 +112,9 @@ class Steam(commands.Cog):
         await ctx.send(file=discord.File(location), reference=ctx.message)
 
     @commands.command()
-    async def blacklist(self, ctx, domain: str = None, job: str = None):
+    async def blacklist(
+        self, ctx: commands.Context, domain: str = None, job: str = None
+    ) -> None:
         if job and domain and job.lower() == "-r":
             util.runSQL(
                 "delete from steam_Blacklist where Keyword = ?", [domain.lower()]
@@ -150,7 +152,7 @@ class Steam(commands.Cog):
                     )
 
     @tasks.loop(hours=2)
-    async def giveawayTask(self):
+    async def giveawayTask(self) -> None:
         self.checkGiveaway()
         for guild in self.bot.guilds:
             newlist = self.getNewGiveaway(guild.id)

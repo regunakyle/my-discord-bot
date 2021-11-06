@@ -1,17 +1,18 @@
 from discord.ext import commands
-from PIL import Image
 import yfinance as yf
 from ..utility import utility as util
 import subprocess, re, discord, os
-import tweepy
+import typing as ty
 
 
 class General(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.command()
-    async def forex(self, ctx, amt, start, target):
+    async def forex(
+        self, ctx: commands.Context, amt: str, start: str, target: str
+    ) -> None:
         """Convert currency."""
         forex = start + target + "=X" if start.lower() != "usd" else target + "=X"
         try:
@@ -29,7 +30,7 @@ class General(commands.Cog):
             )
 
     @commands.command()
-    async def p(self, ctx, plink, webm=None):
+    async def p(self, ctx: commands.Context, plink: str, webm: ty.Optional[str] = None):
         """Show the first picture (or video) of Pixiv link."""
         link = (
             re.compile(r"(www\.pixiv\.net\/(?:en\/)?artworks\/[0-9]+)")
@@ -46,9 +47,7 @@ class General(commands.Cog):
                 reference=ctx.message,
             )
         else:
-            link = (
-                re.compile(r"(\.\\gallery-dl\\pixiv\\.+)").search(result.stdout).group()
-            )
+            link = re.compile(r"(./gallery-dl/pixiv/.*)").search(result.stdout).group()
             if os.path.getsize(link) >= 8000000:
                 await ctx.send("The image/video is too big!", reference=ctx.message)
             else:
@@ -56,14 +55,8 @@ class General(commands.Cog):
                 # This works!
                 os.remove(link)
 
-    @commands.command()
-    async def t(self, ctx, tlink):
-        """Show video/gif of twitter link."""
 
-
-# TODO: 6 Task(s)
-# Twitter animation downloader
+# TODO: 3 Task(s)
 # 燦神Calculator
 # Poll Creator
 # xkcd feedparser
-# Bonus: Chatbot AI

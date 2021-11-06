@@ -9,8 +9,6 @@ from .modules.meta import Meta
 from .modules.general import General
 from .modules.touhou import Touhou
 
-# from .modules.stock import Stock
-
 
 class ErrorHandler(commands.Cog):
     """A cog for global error handling."""
@@ -21,7 +19,7 @@ class ErrorHandler(commands.Cog):
     @commands.Cog.listener()
     async def on_command_error(
         self, ctx: commands.Context, error: commands.CommandError
-    ):
+    ) -> None:
         """A global error handler cog."""
 
         if isinstance(error, commands.CommandNotFound):
@@ -40,7 +38,9 @@ class ErrorHandler(commands.Cog):
 
 
 class discordBot(commands.Bot):
-    def __init__(self, command_prefix, intents, activity):
+    def __init__(
+        self, command_prefix: str, intents: discord.Intents, activity: discord.Game
+    ):
         super().__init__(
             command_prefix=command_prefix, intents=intents, activity=activity
         )
@@ -53,36 +53,17 @@ class discordBot(commands.Bot):
 
     guildPref = util.runSQL("select * from guildInfo", None, True)
 
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         print("Logged in as " + self.user.name + " (" + str(self.user.id) + ").")
         self.add_cog(ErrorHandler(self))
         self.add_cog(Steam(self))
         self.add_cog(Meta(self))
         self.add_cog(General(self))
         self.add_cog(Touhou(self))
-        # self.add_cog(Stock(self))
 
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message) -> None:
         if message.author == self.user:
             return
-
-        # yuyuhu
-        if message.author.id == "143004153910657024":
-            waifulist = ["waifu", "wife", "老婆"]
-            if any(x in message.content for x in waifulist) or (
-                len(message.content) == 1 and message.content == "婆"
-            ):
-                if random.randint(0, 1) == 0:
-                    await message.channel.send(
-                        file=discord.File("./assets/images/youmu_kick.jpg"),
-                        reference=message,
-                    )
-                else:
-                    await message.channel.send(
-                        file=discord.File("./assets/images/mokou_kick.jpg"),
-                        reference=message,
-                    )
-                return
 
         # Commands won't work without this line
         await self.process_commands(message)
