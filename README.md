@@ -7,8 +7,8 @@ Data are stored in an embedded sqlite3 database file.
 ## Deployment guide
 
 1. Create a _.env_ file and add this line to it:
-
-   - DISCORD_TOKEN=**\*YOUR DISCORD TOKEN**\_
+   <!-- prettier-ignore -->
+      - DISCORD_TOKEN=**_YOUR DISCORD TOKEN_**
 
 2. (Recommended) Create a virtual python environment and install dependencies from _requirements.txt_.
 
