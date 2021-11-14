@@ -1,16 +1,11 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.9
+FROM python:3.9-slim-buster
 
 WORKDIR /app
 
-RUN apt update
-RUN apt -y upgrade
-RUN apt -y install sqlite3 ffmpeg
-
-COPY requirements.txt requirements.txt
-RUN pip3 install -r requirements.txt
-
 COPY . .
 
-CMD ["python3", "main.py"]
+RUN apt -y update && apt install -y ffmpeg nano sqlite3 && pip3 install -r requirements.txt
+
+CMD ["python3", "-u", "main.py"]

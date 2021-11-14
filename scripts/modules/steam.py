@@ -1,9 +1,5 @@
-import feedparser
+import feedparser, datetime, re, csv, discord, typing as ty
 from ..utility import utility as util
-import datetime
-import re
-import csv
-import discord
 from discord.ext import commands, tasks
 
 
@@ -44,12 +40,12 @@ class Steam(commands.Cog):
                     pass
         print("Check giveaway ended.")
 
-    def getNewGiveaway(self, guildId: str) -> tuple:
+    def getNewGiveaway(self, guildId: str) -> ty.Union[tuple, None]:
         channel = util.runSQL(
             "select BotChannel from guildInfo where GuildId = ?", [guildId], True
-        )[0]["BotChannel"]
+        )
         if channel is None:
-            return (None, None)
+            return None
         # TODO: Use regex to filter
         results = util.runSQL(
             """
@@ -83,12 +79,12 @@ class Steam(commands.Cog):
                     filteredResults.append(result)
         else:
             filteredResults = None
-        return channel, filteredResults
+        return channel[0]["BotChannel"], filteredResults
 
     @commands.command()
     async def getAllRecord(self, ctx: commands.Context) -> None:
         """List all record in database"""
-        location = "./volume/assets/temp/GiveawayList.csv"
+        location = "./assets/temp/GiveawayList.csv"
         with open(location, "w", newline="") as file:
             writer = csv.writer(file)
             writer.writerow(["Title", "Link", "Publish Time", "Expiry Date"])
@@ -156,6 +152,9 @@ class Steam(commands.Cog):
         self.checkGiveaway()
         for guild in self.bot.guilds:
             newlist = self.getNewGiveaway(guild.id)
+            if newlist == None:
+                util.print(f"This guild (id: {guild.id}) has no yet set a bot channel!")
+                continue
             channel = self.bot.get_channel(int(newlist[0]))
             if newlist[1]:
                 for item in newlist[1]:

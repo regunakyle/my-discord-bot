@@ -1,7 +1,5 @@
-import sqlite3
+import sqlite3, logging, typing as ty
 from datetime import datetime
-import logging
-import typing as ty
 
 
 class utility:

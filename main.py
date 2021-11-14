@@ -1,13 +1,17 @@
 from scripts.utility import utility as util
 from datetime import datetime
 from pathlib import Path
-import configparser, discord, logging
+from dotenv import dotenv_values
+import discord, logging, os
 
 if __name__ == "__main__":
     # Initialization
     if not Path("./volume").is_dir():
         util.print("Folder 'volume' not found. Beginning initialization...")
-        Path("./volume/logs/").mkdir(parents=True, exist_ok=True)
+        Path("./volume").mkdir(parents=True, exist_ok=True)
+
+    if not Path("./volume/logs").is_dir():
+        Path("./volume/logs").mkdir(parents=True, exist_ok=True)
 
     if not Path("./volume/db.sqlite3").is_file():
         util.print("Database not found. Creating sqlite database...")
@@ -23,15 +27,15 @@ if __name__ == "__main__":
         cursor.close()
         cnxn.close()
 
-    config = configparser.ConfigParser()
-    config.read("./volume/app.cfg")
-    try:
-        token = config["Discord"]["Token"]
-    except KeyError:
-        util.print(
-            "Cannot find your Discord token.\nPlease follow the instructions written in GitHub README.md."
+    if Path("./.env").is_file():
+        config = dotenv_values("./.env")
+        token = config["DISCORD_TOKEN"]
+    elif os.getenv("DISCORD_TOKEN"):
+        token = os.getenv("DISCORD_TOKEN")
+    else:
+        raise ValueError(
+            "Cannot find your discord token.\nPlease refer to my Github/Dockerhub repo for help."
         )
-        quit()
 
     logging.basicConfig(
         filename="./volume/logs/" + util.strftime(datetime.now(), False) + ".log",

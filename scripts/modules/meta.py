@@ -1,7 +1,6 @@
-import discord
+import discord, typing as ty
 from discord.ext import commands
 from ..utility import utility as util
-import typing as ty
 
 # Reference: https://gist.github.com/InterStella0/b78488fb28cadf279dfd3164b9f0cf96
 class MyHelpCommand(commands.MinimalHelpCommand):

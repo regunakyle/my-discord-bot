@@ -1,8 +1,6 @@
 from discord.ext import commands
-import yfinance as yf
 from ..utility import utility as util
-import subprocess, re, discord, os
-import typing as ty
+import subprocess, re, discord, os, typing as ty, yfinance as yf
 
 
 class General(commands.Cog):

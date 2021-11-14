@@ -1,20 +1,28 @@
 # Reguna's Discord Bot
 
-Written in Python using Pycord.
+Written in Python3.9 using [Pycord](https://github.com/Pycord-Development/pycord).
+
+Data are stored in an embedded sqlite3 database file.
 
 ## Deployment guide
 
-Create a file _app.cfg_ and put it into the _./volume_ folder.
+1. Create a _.env_ file and add this line to it:
 
-Input the following into _app.cfg_:
+   - DISCORD_TOKEN=**\*YOUR DISCORD TOKEN**\_
 
----
+2. (Recommended) Create a virtual python environment and install dependencies from _requirements.txt_.
 
-\[Discord\]
+3. Run _python main&#46;py_ in your console.
 
-Token=_Your Discord Token_
+## Docker
 
----
+If you prefer Docker, a recommended way is to run **(after creating _.env_ with _DISCORD_TOKEN_)**:
+
+- _docker compose up -d_
+
+or you can pull the image from [here](https://hub.docker.com/r/regunakyle/discordbot) and run:
+
+- _docker run -env DISCORD_TOKEN=**YOUR DISCORD TOKEN** -d regunakyle/discordbot:0.1.1_
 
 ## Features
 
@@ -60,3 +68,6 @@ while those in _\<angle brackets\>_ are optional.
 - Get the full image from _**pixiv url**_
   - Add _**-webm**_ if your image is animated
 - **Important**: To use this feature, first install _ffmepg_ in your system, then run in console (in your python environment): _gallery-dl oauth:pixiv_
+  - If you are using Docker, _ffmpeg_ has already been installed for you. Start the discord bot container, then run in console:
+    - _docker exec -it \<container-name-or-id\> /bin/bash_
+    - Then run _gallery-dl oauth:pixiv_ in the newly spawned bash shell.

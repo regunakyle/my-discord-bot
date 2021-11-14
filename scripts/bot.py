@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-import random
 from .utility import utility as util
 
 # Modules

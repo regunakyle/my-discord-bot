@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  discordbot:
+    build: .
+    image: regunakyle/discordbot:0.1.1
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - dbot-vol:/app/volume
+volumes:
+  dbot-vol:
