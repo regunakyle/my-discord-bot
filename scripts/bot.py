@@ -7,6 +7,7 @@ from .modules.steam import Steam
 from .modules.meta import Meta
 from .modules.general import General
 from .modules.touhou import Touhou
+from .modules.stock import Stock
 
 
 class ErrorHandler(commands.Cog):
@@ -59,6 +60,7 @@ class discordBot(commands.Bot):
         self.add_cog(Meta(self))
         self.add_cog(General(self))
         self.add_cog(Touhou(self))
+        self.add_cog(Stock(self))
 
     async def on_message(self, message: discord.Message) -> None:
         if message.author == self.user:

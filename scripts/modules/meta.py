@@ -2,8 +2,13 @@ import discord, typing as ty
 from discord.ext import commands
 from ..utility import utility as util
 
-# Reference: https://gist.github.com/InterStella0/b78488fb28cadf279dfd3164b9f0cf96
+# TODO: 1 Task(s)
+# Custom help command
+# Show log
+
+
 class MyHelpCommand(commands.MinimalHelpCommand):
+    # Reference: https://gist.github.com/InterStella0/b78488fb28cadf279dfd3164b9f0cf96
     def get_command_signature(self, command: commands) -> str:
         return "%s%s %s" % (
             self.clean_prefix,
@@ -57,6 +62,7 @@ class Meta(commands.Cog):
                 "Operation failed. Something went wrong.", reference=ctx.message
             )
 
-
-# TODO: 1 Task(s)
-# Custom help command
+    @commands.command()
+    async def log(self, ctx: commands.Context, date: str = None) -> None:
+        """Send log file for a specific date (by default latest date)."""
+        print("hi")

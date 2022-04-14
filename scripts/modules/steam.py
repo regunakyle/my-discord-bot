@@ -1,6 +1,6 @@
 import feedparser, datetime, re, csv, discord, typing as ty
-from ..utility import utility as util
 from discord.ext import commands, tasks
+from ..utility import utility as util
 
 
 class Steam(commands.Cog):

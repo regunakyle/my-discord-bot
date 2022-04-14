@@ -37,7 +37,7 @@ class General(commands.Cog):
         )
         command = ["gallery-dl", link, "--range", "1"]
         if webm:
-            command.append("--ugoira-conv-lossless")
+            command.append("--ugoira-conv")
         result = subprocess.run(command, capture_output=True, text=True)
         if len(result.stdout) == 0:
             await ctx.send(
@@ -45,7 +45,7 @@ class General(commands.Cog):
                 reference=ctx.message,
             )
         else:
-            link = re.compile(r"(./gallery-dl/pixiv/.*)").search(result.stdout).group()
+            link = re.compile(r"(./volume/gallery-dl/pixiv/.*)").search(result.stdout).group()
             if os.path.getsize(link) >= 8000000:
                 await ctx.send("The image/video is too big!", reference=ctx.message)
             else:

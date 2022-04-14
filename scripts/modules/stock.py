@@ -2,12 +2,11 @@ from discord.ext import commands
 from ..utility import utility as util
 
 # TODO: 4 task(s)
-# Get into touhou guide
-# Subscription to certain people, e.g. ZUN
-# Ask trivia question; Validate answer
-# Set/Remove trivia
+# Stock quote
+# Daily P/L reminder
+# Portfolio import
 
 
-class Touhou(commands.Cog):
+class Stock(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
