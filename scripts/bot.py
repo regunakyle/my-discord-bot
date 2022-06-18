@@ -1,4 +1,4 @@
-import discord
+import discord, logging
 from discord.ext import commands
 from .utility import utility as util
 
@@ -8,6 +8,8 @@ from .modules.meta import Meta
 from .modules.general import General
 from .modules.touhou import Touhou
 from .modules.stock import Stock
+
+logger = logging.getLogger(__name__)
 
 
 class ErrorHandler(commands.Cog):
@@ -22,6 +24,8 @@ class ErrorHandler(commands.Cog):
     ) -> None:
         """A global error handler cog."""
 
+        logger.error(error)
+
         if isinstance(error, commands.CommandNotFound):
             message = "This command does not exist."
         elif isinstance(error, commands.CommandOnCooldown):
@@ -31,7 +35,6 @@ class ErrorHandler(commands.Cog):
         elif isinstance(error, commands.UserInputError):
             message = "Something about your input was wrong, please check your input and try again!"
         else:
-            util.print(error)
             message = "Oh no! Something went wrong while running the command!"
 
         await ctx.send(message, reference=ctx.message)
@@ -39,28 +42,37 @@ class ErrorHandler(commands.Cog):
 
 class discordBot(commands.Bot):
     def __init__(
-        self, command_prefix: str, intents: discord.Intents, activity: discord.Game
+        self,
+        command_prefix: str,
+        intents: discord.Intents,
+        activity: discord.Game,
+        description: str,
     ):
         super().__init__(
-            command_prefix=command_prefix, intents=intents, activity=activity
+            command_prefix=command_prefix,
+            intents=intents,
+            activity=activity,
+            description=description,
         )
 
-    intents = discord.Intents(messages=True, guilds=True)
-    description = (
-        "Discord bot for self use. \nWritten in Python, written by Reguna#9236."
-    )
-    activity = discord.Game(name=">>help")
-
-    guildPref = util.runSQL("select * from guildInfo", None, True)
-
     async def on_ready(self) -> None:
-        print("Logged in as " + self.user.name + " (" + str(self.user.id) + ").")
+        logger.info("Logged in as " + self.user.name + " (" + str(self.user.id) + ").")
         self.add_cog(ErrorHandler(self))
         self.add_cog(Steam(self))
         self.add_cog(Meta(self))
         self.add_cog(General(self))
         self.add_cog(Touhou(self))
         self.add_cog(Stock(self))
+
+    async def on_member_join(self, member: discord.member) -> None:
+        channel = member.guild.system_channel
+        if channel is not None:
+            if member.guild.id == 651435165012459520:
+                await channel.send(f"<@{member.id}>\nWelcome!")
+            if member.guild.id == 200911777721090057:
+                await channel.send(
+                    f"<@{member.id}>\n歡迎加入本鄉!\n請先閱讀<#315162071945838592> <#680349727510102036> <#591934638964998144>並選取合適之身份組!"
+                )
 
     async def on_message(self, message: discord.Message) -> None:
         if message.author == self.user:

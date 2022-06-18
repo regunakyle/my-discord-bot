@@ -1,23 +1,40 @@
 from scripts.utility import utility as util
 from scripts.bot import discordBot
-from datetime import datetime
 from pathlib import Path
 from dotenv import dotenv_values
 import discord, logging, os, sqlite3
+from logging.handlers import TimedRotatingFileHandler
+
+# <#ChannelID> <@UserID>
 
 
-if __name__ == "__main__":
+def main():
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logHandler = TimedRotatingFileHandler(
+        os.path.join(os.getcwd(), "volume", "logs", "discord.log"),
+        when="D",
+        backupCount=10,
+        encoding="utf-8",
+    )
+    logHandler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s %(levelname)-8s %(name)-15s %(message)s", datefmt="%H:%M:%S"
+        )
+    )
+    logger.addHandler(logHandler)
+    logger.addHandler(logging.StreamHandler())
 
     # Initialization
     if not Path("./volume").is_dir():
-        util.print("Folder 'volume' not found. Beginning initialization...")
+        logger.info("Folder 'volume' not found. Beginning initialization...")
         Path("./volume").mkdir(parents=True, exist_ok=True)
 
     if not Path("./volume/logs").is_dir():
         Path("./volume/logs").mkdir(parents=True, exist_ok=True)
 
     if not Path("./volume/db.sqlite3").is_file():
-        util.print("Database not found. Creating sqlite database...")
+        logger.info("Database not found. Creating sqlite database...")
         # Initialize database
 
         cnxn = sqlite3.connect("./volume/db.sqlite3")
@@ -36,22 +53,20 @@ if __name__ == "__main__":
         token = os.getenv("DISCORD_TOKEN")
     else:
         raise ValueError(
-            "Cannot find your discord token.\nPlease refer to my Github/DockerHub repo for help."
+            "Cannot find your discord token.\nPlease refer to my Github/DockerHub repository for help."
         )
 
-    # TODO: Daily rotating logging
-    logging.basicConfig(
-        filename="./volume/logs/" + util.strftime(datetime.now(), False) + ".log",
-        level=logging.DEBUG,
-        format="%(asctime)s(%(levelname)s) - %(message)s",
-        datefmt="%H:%M:%S",
-    )
-
     command_prefix = ">>"
-    intents = discord.Intents(messages=True, guilds=True)
+    intents = discord.Intents(messages=True, guilds=True, members=True)
     activity = discord.Game(name=">>help")
-    bot = discordBot(command_prefix, intents, activity)
+    description = (
+        "Discord bot for self use. \nWritten in Python, written by Reguna#9236."
+    )
+    bot = discordBot(command_prefix, intents, activity, description)
 
-    logging.info("STARTING DISCORD BOT PROCESS...\n")
+    logger.info("STARTING DISCORD BOT PROCESS...\n")
     bot.run(token)
-    logging.info("ENDING DISCORD BOT PROCESS...\n")
+
+
+if __name__ == "__main__":
+    main()

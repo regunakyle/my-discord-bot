@@ -1,10 +1,10 @@
-import discord, typing as ty
+import discord, typing as ty, logging, os, datetime as dt
 from discord.ext import commands
 from ..utility import utility as util
 
 # TODO: 1 Task(s)
 # Custom help command
-# Show log
+logger = logging.getLogger(__name__)
 
 
 class MyHelpCommand(commands.MinimalHelpCommand):
@@ -43,26 +43,54 @@ class Meta(commands.Cog):
 
     @commands.command()
     async def setBotChannel(
-        self, ctx: commands.Context, unset: ty.Optional[str] = None
+        self, ctx: commands.Context, is_unset: ty.Optional[str] = None
     ) -> None:
-        """Set the channel for bot notifications."""
+        """Set the channel for bot notifications.
+        Input anything after the command to unset bot channel from this guild."""
         try:
-            util.runSQL(
-                "INSERT OR REPLACE INTO guildInfo values (?,?,?,Datetime())",
-                [
-                    ctx.guild.id,
-                    ctx.guild.name,
-                    ctx.channel.id if unset is None else None,
-                ],
-            )
+            if is_unset:
+                util.runSQL(
+                    "UPDATE guildInfo SET BotChannel = null where GuildId = ?",
+                    [ctx.guild.id],
+                )
+            else:
+                util.runSQL(
+                    "INSERT OR REPLACE INTO guildInfo values (?,?,?,Datetime())",
+                    [ctx.guild.id, ctx.guild.name, ctx.channel.id],
+                )
             await ctx.channel.send("Update complete.", reference=ctx.message)
         except Exception as e:
-            util.print(e)
+            logger.error(e)
             await ctx.send(
                 "Operation failed. Something went wrong.", reference=ctx.message
             )
 
     @commands.command()
-    async def log(self, ctx: commands.Context, date: str = None) -> None:
-        """Send log file for a specific date (by default latest date)."""
-        print("hi")
+    async def log(self, ctx: commands.Context, number_of_days: str = "0") -> None:
+        """Send log file from ***number_of_days*** days ago (by default today).
+        Only usable by privilaged users.
+        """
+        try:
+            assert int(number_of_days) != 0
+            dateString = dt.date.strftime(
+                dt.date.today() + dt.timedelta(days=int(number_of_days)),
+                format=r".%Y-%m-%d",
+            )
+        except Exception as e:
+            dateString = ""
+
+        if ctx.author.id == 263243377821089792:
+            link = os.path.join(
+                os.getcwd(), "volume", "logs", "discord.log", dateString
+            )
+            if os.path.isfile(link):
+                await ctx.send(file=discord.File(link), reference=ctx.message)
+            else:
+                await ctx.send(
+                    f"File {'discord.log' + dateString} not found.",
+                    reference=ctx.message,
+                )
+        else:
+            await ctx.send(
+                "Only privilaged user may use this command.", reference=ctx.message
+            )
