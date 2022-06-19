@@ -81,7 +81,7 @@ class Meta(commands.Cog):
 
         if ctx.author.id == 263243377821089792:
             link = os.path.join(
-                os.getcwd(), "volume", "logs", "discord.log", dateString
+                os.getcwd(), "volume", "logs", f"discord.log{dateString}"
             )
             if os.path.isfile(link):
                 await ctx.send(file=discord.File(link), reference=ctx.message)

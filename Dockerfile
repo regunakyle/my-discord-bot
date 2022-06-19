@@ -6,6 +6,6 @@ WORKDIR /app
 
 COPY . .
 
-RUN apt -y update && apt install -y ffmpeg nano sqlite3 && pip3 install -r requirements.txt --no-cache-dir
+RUN apt -y update && apt install -y ffmpeg && pip3 install -r requirements.txt --no-cache-dir && mv .gallery-dl.conf $HOME/.gallery-dl.conf
 
 CMD ["python3", "-u", "main.py"]

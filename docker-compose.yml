@@ -1,25 +1,14 @@
 version: "3.9"
 services:
   discordbot:
-    init: true
     container_name: discordbot
     image: regunakyle/discordbot
-    # Format: <UID>:<GID>; run 'id' in cli to see what they are
-    user: 1000:100
     environment:
-      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_TOKEN: ${DISCORD_TOKEN} # Your discord token here
       PYTHONUNBUFFERED: 1
-      XDG_CONFIG_HOME: /app/volume
-    logging:
-      driver: json-file
-      options:
-        max-size: ${DOCKERLOGGING_MAXSIZE}
-        max-file: ${DOCKERLOGGING_MAXFILE}
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
-    # Prevent Docker Compose from creating a new network; For simplier firewall management
-    network_mode: bridge
 volumes:
   dbot-vol:
     name: dbot-vol

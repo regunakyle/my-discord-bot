@@ -57,7 +57,7 @@ class General(commands.Cog):
         result = subprocess.run(command, capture_output=True, text=True)
         if len(result.stdout) == 0:
             await ctx.send(
-                "Something went wrong. Maybe your link is invalid?",
+                f"Something went wrong: \n{result.stderr}",
                 reference=ctx.message,
             )
         else:

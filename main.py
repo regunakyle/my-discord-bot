@@ -5,10 +5,12 @@ from dotenv import dotenv_values
 import discord, logging, os, sqlite3
 from logging.handlers import TimedRotatingFileHandler
 
-# <#ChannelID> <@UserID>
-
 
 def main():
+    # Initialization
+    Path("./volume/logs").mkdir(parents=True, exist_ok=True)
+    Path("./volume/gallery-dl").mkdir(parents=True, exist_ok=True)
+
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     logHandler = TimedRotatingFileHandler(
@@ -19,19 +21,12 @@ def main():
     )
     logHandler.setFormatter(
         logging.Formatter(
-            "%(asctime)s %(levelname)-8s %(name)-15s %(message)s", datefmt="%H:%M:%S"
+            "%(asctime)s %(levelname)-8s %(name)-15s %(message)s",
+            datefmt="%H:%M:%S",
         )
     )
     logger.addHandler(logHandler)
     logger.addHandler(logging.StreamHandler())
-
-    # Initialization
-    if not Path("./volume").is_dir():
-        logger.info("Folder 'volume' not found. Beginning initialization...")
-        Path("./volume").mkdir(parents=True, exist_ok=True)
-
-    if not Path("./volume/logs").is_dir():
-        Path("./volume/logs").mkdir(parents=True, exist_ok=True)
 
     if not Path("./volume/db.sqlite3").is_file():
         logger.info("Database not found. Creating sqlite database...")

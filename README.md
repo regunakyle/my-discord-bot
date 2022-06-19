@@ -1,28 +1,40 @@
 # Reguna's Discord Bot
 
-Written in Python3.9 using [Pycord](https://github.com/Pycord-Development/pycord).
+Written in Python 3.9 using [discord.py](https://github.com/Rapptz/discord.py).
 
 Data are stored in an embedded sqlite3 database file.
 
 ## Deployment guide
 
-1. Create a _.env_ file and add this line to it:
-   <!-- prettier-ignore -->
-      - DISCORD_TOKEN=**_YOUR DISCORD TOKEN_**
+1. Download the whole source code using git clone.
 
-2. (Recommended) Create a virtual python environment and install dependencies from _requirements.txt_.
+1. Rename _.env.example_ to _.env_ and put your Discord token inside.
 
-3. Run _python main&#46;py_ in your console.
+1. Create a virtual python environment and install dependencies from _requirements.txt_.
 
-## Docker
+1. Run _python main&#46;py_ in your console.
 
-If you prefer Docker, a recommended way is to run **(after creating _.env_ with _DISCORD_TOKEN_)**:
+## Docker Compose
 
-- _docker compose up -d_
+If you prefer Docker, you can use the following Docker Compose:
 
-or you can pull the image from [here](https://hub.docker.com/r/regunakyle/discordbot) and run:
-
-- _docker run -env DISCORD_TOKEN=**YOUR DISCORD TOKEN** -d regunakyle/discordbot:0.1.1_
+```yaml
+---
+version: "3.9"
+services:
+  discordbot:
+    container_name: discordbot
+    image: regunakyle/discordbot
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN} # Your discord token here
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - dbot-vol:/app/volume
+    restart: unless-stopped
+volumes:
+  dbot-vol:
+    name: dbot-vol
+```
 
 ## Features
 
@@ -45,12 +57,12 @@ while those in _\<angle brackets\>_ are optional.
 
 - Set the channel as the bot channel: all automated messages will be sent in bot channel.
 - With _**-unset**_: remove previously set bot channel
-- **Important**: Game deal notifications are disabled if there is no designated bot channel
+- **Important**: Game deal notifications are **disabled** if there is no designated bot channel
 
 ### >>blacklist _\<domain\>_ _\<\-r\>_
 
 - Print out current blacklisted domains
-- With _**domain**_: insert _domain_ into blacklist, ignoring future game deals from _domain_
+- With _**domain**_: insert **domain** into blacklist, ignoring future game deals from **domain**
 - With _**domain**_ and _**-r**_ : remove _domain_ from blacklist
 
 ### >>getAllRecord
@@ -69,5 +81,5 @@ while those in _\<angle brackets\>_ are optional.
   - Add _**-webm**_ if your image is animated
 - **Important**: To use this feature, first install _ffmepg_ in your system, then run in console (in your python environment): _gallery-dl oauth:pixiv_
   - If you are using Docker, _ffmpeg_ has already been installed for you. Start the discord bot container, then run in console:
-    - _docker exec -it \<container-name-or-id\> /bin/bash_
-    - Then run _gallery-dl oauth:pixiv_ in the newly spawned bash shell.
+    1. _docker exec -it \<container-name-or-id\> /bin/bash_
+    2. _gallery-dl oauth:pixiv_
