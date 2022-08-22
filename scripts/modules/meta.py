@@ -1,6 +1,6 @@
 import discord, typing as ty, logging, os, datetime as dt
 from discord.ext import commands
-from ..utility import utility as util
+from ..utility import Utility as Util
 
 # TODO: 1 Task(s)
 # Custom help command
@@ -49,12 +49,12 @@ class Meta(commands.Cog):
         Input anything after the command to unset bot channel from this guild."""
         try:
             if is_unset:
-                util.runSQL(
+                Util.runSQL(
                     "UPDATE guildInfo SET BotChannel = null where GuildId = ?",
                     [ctx.guild.id],
                 )
             else:
-                util.runSQL(
+                Util.runSQL(
                     "INSERT OR REPLACE INTO guildInfo values (?,?,?,Datetime())",
                     [ctx.guild.id, ctx.guild.name, ctx.channel.id],
                 )

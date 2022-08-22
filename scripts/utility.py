@@ -3,7 +3,7 @@ import sqlite3, logging, typing as ty
 logger = logging.getLogger(__name__)
 
 
-class utility:
+class Utility:
     @classmethod
     def connectDB(self) -> tuple:
         cnxn = sqlite3.connect("./volume/db.sqlite3")

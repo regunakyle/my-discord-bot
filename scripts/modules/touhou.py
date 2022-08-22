@@ -1,5 +1,5 @@
 from discord.ext import commands
-from ..utility import utility as util
+from ..utility import Utility as Util
 import logging
 
 # TODO: 4 task(s)

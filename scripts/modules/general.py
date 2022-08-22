@@ -1,5 +1,5 @@
 from discord.ext import commands
-from ..utility import utility as util
+from ..utility import Utility as Util
 import subprocess, re, discord, os, typing as ty, yfinance as yf, logging
 
 logger = logging.getLogger(__name__)
@@ -74,12 +74,12 @@ class General(commands.Cog):
                 await ctx.send("The image/video is too big!", reference=ctx.message)
             elif (
                 ctx.guild.premium_subscription_count < 14
-                and os.path.getsize(link) >= 1000 * 1000 * 50
+                and os.path.getsize(link) >= 1000 * 1000 * 16
             ):  # Server level 2, file size 50MB maximum
-                await ctx.send("The image/video is too big!", reference=ctx.message)
-            elif os.path.getsize(link) >= 1000 * 1000 * 100:
-                # Server level 3, file size 100MB maximum
-                await ctx.send("The image/video is too big!", reference=ctx.message)
+                await ctx.send(
+                    "The image/video is too big! (16MB maximum supported)",
+                    reference=ctx.message,
+                )
             else:
                 await ctx.send(file=discord.File(link), reference=ctx.message)
                 os.remove(link)

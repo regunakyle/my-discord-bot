@@ -1,6 +1,6 @@
 import discord, logging
 from discord.ext import commands
-from .utility import utility as util
+from .utility import Utility as Util
 
 # Modules
 from .modules.steam import Steam

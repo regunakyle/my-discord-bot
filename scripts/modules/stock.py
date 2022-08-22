@@ -1,5 +1,5 @@
 from discord.ext import commands
-from ..utility import utility as util
+from ..utility import Utility as Util
 
 # TODO: 4 task(s)
 # Stock quote

@@ -1,6 +1,6 @@
-import feedparser, datetime as dt, re, csv, discord, typing as ty, logging
+import feedparser, datetime as dt, re, csv, discord, typing as ty, logging, io
 from discord.ext import commands, tasks
-from ..utility import utility as util
+from ..utility import Utility as Util
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class Steam(commands.Cog):
                     else None
                 )
                 try:
-                    util.runSQL(
+                    Util.runSQL(
                         "Insert into steam_GiveawayHistory values (?,?,?,?)",
                         [entry["title"], entry["link"], publishTime, expiryDate],
                     )
@@ -42,13 +42,13 @@ class Steam(commands.Cog):
         logger.info("Check giveaway ended.")
 
     def getNewGiveaway(self, guildId: str) -> ty.Union[tuple, None]:
-        channel = util.runSQL(
+        channel = Util.runSQL(
             "select BotChannel from guildInfo where GuildId = ?", [guildId]
         )
         if channel is None or channel[0]["BotChannel"] is None:
             return None
         # TODO: Use regex to filter
-        results = util.runSQL(
+        results = Util.runSQL(
             """
         SELECT ltrim(sgh.Title,'[giveaway] ') 'Title', sgh.Link, sgh.PublishTime, sgh.ExpiryDate, substr(sgh.Link,instr(sgh.Link,'://')+3,instr(sgh.Link,'com/')-instr(sgh.Link,'://')) 'Domain'
         FROM steam_GiveawayHistory sgh 
@@ -58,13 +58,13 @@ class Steam(commands.Cog):
         """,
             [guildId],
         )
-        util.runSQL(
+        Util.runSQL(
             """
         UPDATE guildInfo
         SET LastUpdated = Datetime()
         """
         )
-        blacklist = util.runSQL(
+        blacklist = Util.runSQL(
             "select Keyword from steam_Blacklist where guildId = ?", [guildId]
         )
         filteredResults = []
@@ -85,12 +85,11 @@ class Steam(commands.Cog):
     @commands.command()
     async def getAllRecord(self, ctx: commands.Context) -> None:
         """List all giveaway record in database"""
-        location = "./assets/temp/GiveawayList.csv"
-        with open(location, "w", newline="") as file:
-            writer = csv.writer(file)
+        with io.StringIO() as f:
+            writer = csv.writer(f)
             writer.writerow(["Title", "Link", "Publish Time", "Expiry Date"])
             # TODO: Give only non-blacklisted items
-            for item in util.runSQL(
+            for item in Util.runSQL(
                 """select ltrim(Title,'[giveaway] ') 'Title',link,PublishTime,
                                         case when ExpiryDate is not NULL then ExpiryDate ELSE 'Unknown' END 'ExpiryDate'
                                         from steam_GiveawayHistory
@@ -105,7 +104,9 @@ class Steam(commands.Cog):
                         item["ExpiryDate"],
                     ]
                 )
-        await ctx.send(file=discord.File(location), reference=ctx.message)
+            buf = io.BytesIO(f.getvalue().encode("utf-8"))
+        buf.name = "records.csv"
+        await ctx.send(file=discord.File(buf), reference=ctx.message)
 
     @commands.command()
     async def blacklist(
@@ -115,7 +116,7 @@ class Steam(commands.Cog):
         >>blacklist : Display current blacklist for this guild
         >>blacklist <domain>: Add <domain> to blacklist; Add anything after <domain> to remove it from blacklist instead"""
         if is_remove and target_domain:
-            util.runSQL(
+            Util.runSQL(
                 "delete from steam_Blacklist where Keyword = ?", [target_domain.lower()]
             )
             await ctx.send(
@@ -127,7 +128,7 @@ class Steam(commands.Cog):
             await self.blacklist(ctx)
         else:
             if target_domain is None:
-                result = util.runSQL(
+                result = Util.runSQL(
                     "SELECT rowid,* FROM steam_Blacklist where GuildId = ?",
                     [ctx.guild.id],
                 )
@@ -141,7 +142,7 @@ class Steam(commands.Cog):
                 await ctx.send(blacklist, reference=ctx.message)
             else:
                 try:
-                    util.runSQL(
+                    Util.runSQL(
                         "insert into steam_Blacklist values (?,?,datetime())",
                         [target_domain.lower(), ctx.guild.id],
                     )

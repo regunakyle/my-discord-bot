@@ -1,4 +1,4 @@
-from scripts.utility import utility as util
+from scripts.utility import Utility as Util
 from scripts.bot import discordBot
 from pathlib import Path
 from dotenv import dotenv_values
@@ -11,6 +11,7 @@ def main():
     Path("./volume/logs").mkdir(parents=True, exist_ok=True)
     Path("./volume/gallery-dl").mkdir(parents=True, exist_ok=True)
 
+    # TODO: Use local time
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     logHandler = TimedRotatingFileHandler(
