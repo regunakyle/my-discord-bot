@@ -52,9 +52,11 @@ def main():
             "Cannot find your discord token.\nPlease refer to my Github/DockerHub repository for help."
         )
 
-    command_prefix = ">>"
-    intents = discord.Intents(messages=True, guilds=True, members=True)
-    activity = discord.Game(name=">>help")
+    command_prefix = config["PREFIX"]
+    intents = discord.Intents.default()
+    intents.members = True
+    intents.message_content = True
+    activity = discord.Game(name=f"{command_prefix}help")
     description = (
         "Discord bot for self use. \nWritten in Python, written by Reguna#9236."
     )

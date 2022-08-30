@@ -57,17 +57,17 @@ class discordBot(commands.Bot):
 
     async def on_ready(self) -> None:
         logger.info("Logged in as " + self.user.name + " (" + str(self.user.id) + ").")
-        self.add_cog(ErrorHandler(self))
-        self.add_cog(Steam(self))
-        self.add_cog(Meta(self))
-        self.add_cog(General(self))
-        self.add_cog(Touhou(self))
-        self.add_cog(Stock(self))
+        await self.add_cog(ErrorHandler(self))
+        await self.add_cog(Steam(self))
+        await self.add_cog(Meta(self))
+        await self.add_cog(General(self))
+        await self.add_cog(Touhou(self))
+        await self.add_cog(Stock(self))
 
     async def on_member_join(self, member: discord.member) -> None:
         channel = member.guild.system_channel
         if channel is not None:
-            if member.guild.id == 651435165012459520:
+            if member.guild.id in [651435165012459520, 1000302465276710943]:
                 await channel.send(f"<@{member.id}>\nWelcome!")
             if member.guild.id == 200911777721090057:
                 await channel.send(

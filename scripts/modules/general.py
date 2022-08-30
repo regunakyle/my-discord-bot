@@ -33,6 +33,11 @@ class General(commands.Cog):
                 f"{amount} {start_currency} = {str(newAmt)} {target_currency}",
                 reference=ctx.message,
             )
+        except AssertionError as e:
+            await ctx.send(
+                "Please enter a value between 0 and 1,000,000,000.",
+                reference=ctx.message,
+            )
         except Exception as e:
             logger.error(e)
             await ctx.send(
@@ -43,7 +48,7 @@ class General(commands.Cog):
     @commands.command()
     async def p(
         self, ctx: commands.Context, pixiv_link: str, is_webm: ty.Optional[str] = None
-    ):
+    ) -> None:
         """Show the first picture (or video) of ***pixiv_link***.
         Input anything after ***pixiv_link*** if your image is animated"""
         link = (
