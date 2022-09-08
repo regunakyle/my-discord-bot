@@ -10,6 +10,60 @@ class Steam(commands.Cog):
         self.bot = bot
         self.giveawayTask.start()
 
+    @discord.app_commands.command()
+    @discord.app_commands.describe(
+        target_domain="Domain of the game site you wish to skip",
+        is_remove="Set to True if you want to remove <targetDomain> in database",
+    )
+    async def blacklist(
+        self,
+        ia: discord.Interaction,
+        target_domain: str = None,
+        is_remove: bool = False,
+    ) -> None:
+        """Blacklisting domains for the find giveaway task."""
+        # Delay response, maximum 15 mins
+        await ia.response.defer()
+
+        test = await self.bot.application_info()
+
+        if target_domain:
+            if is_remove:
+                Util.runSQL(
+                    "DELETE FROM SteamBlacklist WHERE Keyword = ?",
+                    [target_domain.lower()],
+                )
+                await ia.followup.send(
+                    f"If ***{target_domain.lower()}*** is in database, it should be deleted.",
+                )
+            else:
+                try:
+                    Util.runSQL(
+                        "INSERT INTO SteamBlacklist VALUES (?,?,datetime())",
+                        [target_domain.lower(), ia.guild.id],
+                    )
+                    await ia.followup.send(
+                        f"Keyword ***{target_domain.lower()}*** added to database."
+                    )
+                except ValueError as e:
+                    logger.error(e)
+                    await ia.followup.send(
+                        "Insert keyword failed: Probably because this keyword already exists in the database.",
+                    )
+        result = Util.runSQL(
+            "SELECT rowid,* FROM SteamBlacklist WHERE GuildId = ?",
+            [ia.guild.id],
+        )
+        blacklist = f"Keyword blacklist for ***{ia.guild.name}***:\n"
+        if result:
+            for item in result:
+                blacklist += f'{str(item["rowid"])}:***{item["Keyword"]}***\n'
+            blacklist = blacklist[:-1]
+        else:
+            blacklist += "Empty. Maybe you should add something here?"
+        await ia.followup.send(blacklist)
+
+    # Schedule Job Scripts Start
     async def checkGiveaway(self) -> None:
         logger.info("Fetching data from isthereanydeal.com...")
         datePattern = re.compile(r"[eE]xpires? on (\d{4}-\d{2}-\d{2})")
@@ -27,45 +81,49 @@ class Steam(commands.Cog):
                 )
                 try:
                     Util.runSQL(
-                        "Insert into steam_GiveawayHistory values (?,?,?,?)",
+                        "INSERT INTO SteamGiveawayHistory VALUES (?,?,?,?)",
                         [entry["title"], entry["link"], publishTime, expiryDate],
                     )
                     logger.info(
-                        "New record inserted into database. \nTitle: "
-                        + entry["title"]
-                        + "\nPublish Time: "
-                        + publishTime
-                        + "\n"
+                        f"""New record inserted into database. 
+                        Title: {entry["title"]}
+                        Publish Time: {publishTime}
+                        """
                     )
                 except:
+                    # TODO: Find out what this part does
                     pass
         logger.info("Check giveaway ended.")
 
-    def getNewGiveaway(self, guildId: str) -> ty.Union[tuple, None]:
+    def getNewGiveaway(self, guildId: str) -> tuple | None:
         channel = Util.runSQL(
-            "select BotChannel from guildInfo where GuildId = ?", [guildId]
+            "SELECT BotChannel FROM GuildInfo WHERE GuildId = ?", [guildId]
         )
         if channel is None or channel[0]["BotChannel"] is None:
             return None
         # TODO: Use regex to filter
         results = Util.runSQL(
             """
-        SELECT ltrim(sgh.Title,'[giveaway] ') 'Title', sgh.Link, sgh.PublishTime, sgh.ExpiryDate, substr(sgh.Link,instr(sgh.Link,'://')+3,instr(sgh.Link,'com/')-instr(sgh.Link,'://')) 'Domain'
-        FROM steam_GiveawayHistory sgh 
-		INNER JOIN guildInfo gi 
-        ON gi.GuildId = ? AND sgh.PublishTime > gi.LastUpdated
-        ORDER BY PublishTime DESC
+        SELECT
+            ltrim(sgh.Title,'[giveaway] ') 'Title',
+            sgh.Link,
+            sgh.PublishTime,
+            sgh.ExpiryDate,
+            substr(sgh.Link,instr(sgh.Link,'://')+ 3,instr(sgh.Link,'com/')-instr(sgh.Link,'://')) 'Domain'
+        FROM
+            SteamGiveawayHistory sgh
+        INNER JOIN GuildInfo gi 
+                ON
+            gi.GuildId = ?
+            AND sgh.PublishTime > gi.LastUpdated
+        ORDER BY
+            PublishTime DESC
         """,
             [guildId],
         )
-        Util.runSQL(
-            """
-        UPDATE guildInfo
-        SET LastUpdated = Datetime()
-        """
-        )
+        Util.runSQL("UPDATE GuildInfo SET LastUpdated = Datetime()")
         blacklist = Util.runSQL(
-            "select Keyword from steam_Blacklist where guildId = ?", [guildId]
+            "SELECT Keyword FROM SteamBlacklist WHERE guildId = ?", [guildId]
         )
         filteredResults = []
         if results:
@@ -82,103 +140,28 @@ class Steam(commands.Cog):
             filteredResults = None
         return channel[0]["BotChannel"], filteredResults
 
-    @commands.command()
-    async def getAllRecord(self, ctx: commands.Context) -> None:
-        """List all giveaway record in database"""
-        with io.StringIO() as f:
-            writer = csv.writer(f)
-            writer.writerow(["Title", "Link", "Publish Time", "Expiry Date"])
-            # TODO: Give only non-blacklisted items
-            for item in Util.runSQL(
-                """select ltrim(Title,'[giveaway] ') 'Title',link,PublishTime,
-                                        case when ExpiryDate is not NULL then ExpiryDate ELSE 'Unknown' END 'ExpiryDate'
-                                        from steam_GiveawayHistory
-                                        order by PublishTime desc""",
-                None,
-            ):
-                writer.writerow(
-                    [
-                        item["Title"],
-                        item["Link"],
-                        item["PublishTime"],
-                        item["ExpiryDate"],
-                    ]
-                )
-            buf = io.BytesIO(f.getvalue().encode("utf-8"))
-        buf.name = "records.csv"
-        await ctx.send(file=discord.File(buf), reference=ctx.message)
-
-    @commands.command()
-    async def blacklist(
-        self, ctx: commands.Context, target_domain: str = None, is_remove: str = None
-    ) -> None:
-        """Blacklisting domains for the find giveaway task.
-        >>blacklist : Display current blacklist for this guild
-        >>blacklist <domain>: Add <domain> to blacklist; Add anything after <domain> to remove it from blacklist instead"""
-        if is_remove and target_domain:
-            Util.runSQL(
-                "delete from steam_Blacklist where Keyword = ?", [target_domain.lower()]
-            )
-            await ctx.send(
-                "If ***"
-                + target_domain.lower()
-                + "*** is in database, it should be deleted.",
-                reference=ctx.message,
-            )
-            await self.blacklist(ctx)
-        else:
-            if target_domain is None:
-                result = Util.runSQL(
-                    "SELECT rowid,* FROM steam_Blacklist where GuildId = ?",
-                    [ctx.guild.id],
-                )
-                blacklist = "Keyword blacklist for ***" + ctx.guild.name + "***:\n"
-                if result:
-                    for item in result:
-                        blacklist += (
-                            str(item["rowid"]) + ":***" + item["Keyword"] + "***\n"
-                        )
-                    blacklist = blacklist[:-1]
-                await ctx.send(blacklist, reference=ctx.message)
-            else:
-                try:
-                    Util.runSQL(
-                        "insert into steam_Blacklist values (?,?,datetime())",
-                        [target_domain.lower(), ctx.guild.id],
-                    )
-                    await ctx.send(
-                        "Keyword ***"
-                        + target_domain.lower()
-                        + "*** added to database.",
-                        reference=ctx.message,
-                    )
-                except ValueError as e:
-                    logger.error(e)
-                    await ctx.send(
-                        "Insert keyword failed: Probably because this keyword already exists in the database.",
-                        reference=ctx.message,
-                    )
-
     @tasks.loop(hours=2)
     async def giveawayTask(self) -> None:
         await self.checkGiveaway()
         for guild in self.bot.guilds:
-            newlist = self.getNewGiveaway(guild.id)
-            if newlist == None:
+            newList = self.getNewGiveaway(guild.id)
+            if newList == None:
                 logger.warning(
                     f"This guild (id: {guild.id}, name: {guild.name}) has not yet set a bot channel!"
                 )
                 continue
-            channel = self.bot.get_channel(int(newlist[0]))
-            if newlist[1]:
-                for item in newlist[1]:
+            channel = self.bot.get_channel(int(newList[0]))
+            if newList[1]:
+                for item in newList[1]:
                     icon = discord.File(
                         "./assets/images/steam.png", filename="steam.png"
                     )
-                    embed = discord.Embed(title=item["Title"], url=item["Link"])
-                    embed.set_thumbnail(url="attachment://steam.png")
-                    embed.add_field(
-                        name="Publish date", value=item["PublishTime"], inline=False
+                    embed = (
+                        discord.Embed(title=item["Title"], url=item["Link"])
+                        .set_thumbnail(url="attachment://steam.png")
+                        .add_field(
+                            name="Publish date", value=item["PublishTime"], inline=False
+                        )
                     )
                     if item["ExpiryDate"]:
                         embed.add_field(

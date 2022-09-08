@@ -143,3 +143,5 @@ cython_debug/
 /volume
 /unittest
 /.history
+.dbeaver
+.project

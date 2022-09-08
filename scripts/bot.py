@@ -1,5 +1,6 @@
-import discord, logging
+import discord, logging, typing as ty
 from discord.ext import commands
+from pathlib import Path
 from .utility import Utility as Util
 
 # Modules
@@ -17,27 +18,22 @@ class ErrorHandler(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.bot.tree.on_error = self.on_app_command_error
 
-    @commands.Cog.listener()
-    async def on_command_error(
-        self, ctx: commands.Context, error: commands.CommandError
+    async def on_app_command_error(
+        self, ia: discord.Interaction, e: discord.app_commands.AppCommandError
     ) -> None:
-        """A global error handler cog."""
-
-        logger.error(error)
-
-        if isinstance(error, commands.CommandNotFound):
-            message = "This command does not exist."
-        elif isinstance(error, commands.CommandOnCooldown):
-            message = f"This command is on cooldown. Please try again after {round(error.retry_after, 1)} seconds."
-        elif isinstance(error, commands.MissingPermissions):
-            message = "You are missing the required permissions to run this command!"
-        elif isinstance(error, commands.UserInputError):
-            message = "Something about your input was wrong, please check your input and try again!"
-        else:
-            message = "Oh no! Something went wrong while running the command!"
-
-        await ctx.send(message, reference=ctx.message)
+        logger.error(e)
+        try:
+            await ia.response.send_message(
+                "Oh no! Something unexpected happened!",
+                file=discord.File(Path("./assets/images/error.jpg")),
+            )
+        except discord.errors.InteractionResponded:
+            await ia.followup.send(
+                "Oh no! Something unexpected happened!",
+                file=discord.File(Path("./assets/images/error.jpg")),
+            )
 
 
 class discordBot(commands.Bot):
@@ -54,9 +50,11 @@ class discordBot(commands.Bot):
             activity=activity,
             description=description,
         )
+        # Disable prefixed help command, use slash command instead
+        self.help_command = None
 
     async def on_ready(self) -> None:
-        logger.info("Logged in as " + self.user.name + " (" + str(self.user.id) + ").")
+        logger.info(f"Logged in as {self.user.name} ({str(self.user.id)}).")
         await self.add_cog(ErrorHandler(self))
         await self.add_cog(Steam(self))
         await self.add_cog(Meta(self))
@@ -64,6 +62,7 @@ class discordBot(commands.Bot):
         await self.add_cog(Touhou(self))
         await self.add_cog(Stock(self))
 
+    # TODO: Dynamic help message
     async def on_member_join(self, member: discord.member) -> None:
         channel = member.guild.system_channel
         if channel is not None:
@@ -73,10 +72,3 @@ class discordBot(commands.Bot):
                 await channel.send(
                     f"<@{member.id}>\n歡迎加入本鄉!\n請先閱讀<#315162071945838592> <#680349727510102036> <#591934638964998144>並選取合適之身份組!"
                 )
-
-    async def on_message(self, message: discord.Message) -> None:
-        if message.author == self.user:
-            return
-
-        # Commands won't work without this line
-        await self.process_commands(message)

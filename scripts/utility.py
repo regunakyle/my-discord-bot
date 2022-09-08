@@ -1,14 +1,18 @@
-import sqlite3, logging, typing as ty
+import sqlite3, logging, typing as ty, os
+from dotenv import dotenv_values
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
 class Utility:
-    @classmethod
-    def connectDB(self) -> tuple:
+    dotenv = dotenv_values(Path("./.env"))
+
+    def connectDB(self) -> ty.Tuple[sqlite3.Connection, sqlite3.Cursor]:
+        """Connect to SQLite3 database, returning the connection and cursor (as tuple)."""
         cnxn = sqlite3.connect("./volume/db.sqlite3")
 
-        def dict_factory(cursor, row):
+        def dict_factory(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
             d = {}
             for idx, col in enumerate(cursor.description):
                 d[col[0]] = row[idx]
@@ -19,8 +23,16 @@ class Utility:
         return cnxn, cursor
 
     @classmethod
-    def runSQL(cls, query: str, param: ty.Optional[list] = None) -> ty.Optional[list]:
-        cnxn, cursor = cls.connectDB()
+    def runSQL(
+        cls, query: str, param: ty.List[ty.Any] | None = None
+    ) -> ty.List[ty.Dict[str, ty.Any]] | None:
+        """Run a SQL query and return the result as list of rows(as dict),
+
+        or return None if no rows are returned.
+
+        You should only run one SQL statement with each call to this function.
+        """
+        cnxn, cursor = cls.connectDB(cls)
 
         try:
             if param is None:
@@ -39,3 +51,13 @@ class Utility:
             cursor.close()
             cnxn.close()
             raise ValueError(e)
+
+    @classmethod
+    def getEnvVar(cls, paramName: str) -> str | None:
+        """Get the environment variable from .env file.
+
+        If not found in the file (or .env does not exist), get it from system variables instead.
+        """
+        if paramName in cls.dotenv:
+            return cls.dotenv[paramName]
+        return os.getenv(paramName)
