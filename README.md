@@ -113,6 +113,6 @@ Default prefix for old style prefix command is `>>` (Can be changed in `.env` or
 2. Subscription to tweets
 3. XKCD feedparser
 4. P/L notification
-5. Get into touhou guide
+5. Get into Touhou guide
 6. ORM
 7. Dashboard

@@ -65,7 +65,7 @@ class General(commands.Cog):
     @discord.app_commands.command()
     @discord.app_commands.describe(
         pixiv_link="Pixiv image link",
-        image_number="Image number (for albums with multiple images)",
+        image_number="Image number (for albums with multiple images); 1 by default",
     )
     async def pixiv(
         self,

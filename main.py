@@ -52,7 +52,7 @@ def main() -> None:
     intents.members = True
     intents.message_content = True
 
-    activity = discord.Game(name=f"{command_prefix}help")
+    activity = discord.Game(name=f"/help")
 
     description = "Discord bot for self use. \nWritten in Python using discord.py."
 

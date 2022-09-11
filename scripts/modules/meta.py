@@ -81,7 +81,7 @@ class Meta(commands.Cog):
         """Display all available commands, or show the explanation of <command_name>."""
         if not command_name:
             embedDict = {
-                "title": "IT Dog Bot: Help",
+                "title": f"{self.bot.application.name}: Help",
                 "description": f"{self.bot.description}",
                 "color": 65327,
                 "author": {
