@@ -3,4 +3,4 @@ CREATE TABLE "SteamBlacklist" (
 	"GuildId" TEXT NOT NULL,
 	"Timestamp" TEXT NOT NULL,
 	PRIMARY KEY("Keyword")
-) STRICT;
+);

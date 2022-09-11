@@ -5,11 +5,6 @@ from scripts.utility import Utility as Util
 import discord, logging, sqlite3
 from logging.handlers import TimedRotatingFileHandler
 
-# TODO: 3 Task(s)
-# Dashboard (Quart)
-# ORM
-# os -> pathlib.Path
-
 
 def main() -> None:
     # Initialization
@@ -39,11 +34,13 @@ def main() -> None:
     if not Path("./volume/db.sqlite3").is_file():
         logger.info("Database not found. Creating sqlite database...")
         # Initialize database
+        # Docker Python image uses old version of SQLite, cannot use STRICT keyword
+        # See pysqlite3 (https://github.com/coleifer/pysqlite3)
 
         cnxn = sqlite3.connect("./volume/db.sqlite3")
         cursor = cnxn.cursor()
-        for path in Path("./DB_scripts").rglob("*.sql"):
-            with open(path, "r") as f:
+        for script in Path("./DB_scripts").rglob("*.sql"):
+            with open(script, "r") as f:
                 cursor.execute(f.read())
                 cnxn.commit()
         cursor.close()
@@ -57,9 +54,7 @@ def main() -> None:
 
     activity = discord.Game(name=f"{command_prefix}help")
 
-    description = (
-        "Discord bot for self use. \nWritten in Python, written by Reguna#9236."
-    )
+    description = "Discord bot for self use. \nWritten in Python using discord.py."
 
     bot = discordBot(command_prefix, intents, activity, description)
 

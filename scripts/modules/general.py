@@ -34,7 +34,7 @@ class General(commands.Cog):
         starting_currency: str,
         target_currency: str,
     ) -> None:
-        """Convert currency."""
+        """Convert currency using data from Yahoo Finance."""
 
         # Delay response, maximum 15 mins
         await ia.response.defer()
@@ -73,7 +73,7 @@ class General(commands.Cog):
         pixiv_link: str,
         image_number: int = 1,
     ) -> None:
-        """Show the <image_number>th picture (or video) of <pixiv_link>."""
+        """Show the <image_number>th picture (or video) of [pixiv_link]."""
         link = (
             re.compile(r"(www\.pixiv\.net\/(?:en\/)?artworks\/[0-9]+)")
             .search(pixiv_link)
@@ -100,20 +100,20 @@ class General(commands.Cog):
                 ia.guild.premium_subscription_count < 7 and sizeInBytes >= 8
             ):  # Server level 1 or below, file size 8MB maximum
                 await ia.followup.send(
-                    f"The image/video is too big! (8MB maximum supported, your image is {size}MB)"
+                    f"The image/video is too big! (8MB maximum supported, your image is {sizeInBytes}MB)"
                 )
             elif (
                 ia.guild.premium_subscription_count < 14 and sizeInBytes >= 16
             ):  # Server level 2, file size 50MB maximum
                 await ia.followup.send(
-                    "The image/video is too big! (16MB maximum supported, your image is {size}MB)",
+                    f"The image/video is too big! (16MB maximum supported, your image is {sizeInBytes}MB)",
                 )
             else:
                 embed = (
                     discord.Embed(title="Pixiv Image")
                     .add_field(
                         name="Shared by",
-                        value=f"{ia.user.display_name}@{ia.user.discriminator}",
+                        value=f"{ia.user.display_name}#{ia.user.discriminator}",
                         inline=False,
                     )
                     .add_field(name="Source", value=pixiv_link, inline=False)
@@ -123,7 +123,3 @@ class General(commands.Cog):
                     file=discord.File(link),
                 )
             link.unlink()
-
-
-# TODO: 1 Task(s)
-# xkcd feedparser

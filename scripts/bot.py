@@ -62,7 +62,7 @@ class discordBot(commands.Bot):
         await self.add_cog(Touhou(self))
         await self.add_cog(Stock(self))
 
-    # TODO: Dynamic help message
+    # TODO: Dynamic welcome message
     async def on_member_join(self, member: discord.member) -> None:
         channel = member.guild.system_channel
         if channel is not None:

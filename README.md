@@ -1,18 +1,18 @@
 # Reguna's Discord Bot
 
-Written in Python 3.9 using [discord.py](https://github.com/Rapptz/discord.py).
+Written in Python 3.10 using [discord.py](https://github.com/Rapptz/discord.py).
 
 Data are stored in an embedded sqlite3 database file.
 
 ## Deployment guide
 
-1. Download the whole source code using git clone.
+1. Download the whole source code using `git clone`.
 
-1. Rename _.env.example_ to _.env_ and put your Discord token inside.
+2. Rename `.env.example` to `.env` and put your Discord token inside.
 
-1. Create a virtual python environment and install dependencies from _requirements.txt_.
+3. Create a virtual python environment and install dependencies from `requirements.txt`.
 
-1. Run _python main&#46;py_ in your console.
+4. Run `python main.py` in your console to start up the bot.
 
 ## Docker Compose
 
@@ -39,48 +39,80 @@ volumes:
 
 ## Features
 
-1. Notify you when there are new game deals
-2. Search for new game deals every 2 hours
+1. Notify you when there are new game giveaways
+2. Search for new game giveaways every 2 hours
 3. Also other bot commands...
 
-## List of bot commands (command prefix: >>)
+## List of bot commands
 
-Note: Parameters in _\[square brackets\]_ are mandatory,
+Parameters in `[square brackets]` are mandatory,
 
-while those in _\<angle brackets\>_ are optional.
+while those in `<angle brackets>` are optional.
 
-### >>help _\<command>_
+Default prefix for old style prefix command is `>>` (Can be changed in `.env` or `docker-compose.yml`).
+
+### `<prefix>sync <option>`
+
+- Reload application commands (i.e. slash commands).
+
+  Only the owner of the bot may use this command.
+
+  **Please run this command once after first install and after every update!**
+
+  - `<option>`: For development purpose only, please refer to the source code :)
+
+### `/help <command_name>`
 
 - Display all available commands
-  - With _**command**_: display information of the command
+  - `<command_name>`: Display the information of the command
 
-### >>setBotChannel _\<-unset>_
+### `/setbotchannel <is_unset>`
 
-- Set the channel as the bot channel: all automated messages will be sent in bot channel.
-- With _**-unset**_: remove previously set bot channel
-- **Important**: Game deal notifications are **disabled** if there is no designated bot channel
+- Mark the current channel as the subscription channel.
 
-### >>blacklist _\<domain\>_ _\<\-r\>_
+  All notification will be sent here.
 
-- Print out current blacklisted domains
-- With _**domain**_: insert **domain** into blacklist, ignoring future game deals from **domain**
-- With _**domain**_ and _**-r**_ : remove _domain_ from blacklist
+  - `<is_unset>`: Set to `True` if you want to unmark the subscription channel
 
-### >>getAllRecord
+### `/blacklist <target_domain> <is_remove>`
 
-- Get all previous game deals from database (in _.csv_ format)
+- Blacklist domains for the find giveaway task.
 
-### >>forex _\[amount\]_ _\[starting currency\]_ _\[target currency\]_
+  No notification will be sent for blacklisted domains.
 
-- Convert currency. Using data from Yahoo Finance
-  - Example: >>forex 10000 HKD USD
-    - Convert 10000 HKD to USD
+  - `<target_domain>`: Domain of the game site you wish to blacklist
 
-### >>p _\[pixiv url\]_ _\<-webm>_
+  - `<is_remove>`: Set to `True` if you want to remove `<target_domain>` from blacklist
 
-- Get the full image from _**pixiv url**_
-  - Add _**-webm**_ if your image is animated
-- **Important**: To use this feature, first install _ffmepg_ in your system, then run in console (in your python environment): _gallery-dl oauth:pixiv_
-  - If you are using Docker, _ffmpeg_ has already been installed for you. Start the discord bot container, then run in console:
-    1. _docker exec -it \<container-name-or-id\> /bin/bash_
-    2. _gallery-dl oauth:pixiv_
+### `/forex [amount] [starting currency] [target currency]`
+
+- Convert currency using data from Yahoo Finance.
+  - `[amount]`: Amount in `[starting_currency]`, ranged from 0 to 1,000,000,000
+  - `[starting_currency]`: Starting currency, e.g. `HKD`
+  - `[target_currency]`: Target currency, e.g. `JPY`
+
+### `/pixiv [pixiv_link] <image_number>`
+
+- Show the `<image_number>`th picture (or video) of `[pixiv_link]`.
+  - `[pixiv_link]`: Pixiv image link
+  - `<image_number>`: Image number (for albums with multiple images)
+- **Important**: To use this command, first install `ffmepg`,
+
+  then run (in your python environment): `gallery-dl oauth:pixiv`
+
+  - If you are using Docker, `ffmpeg` has already been installed for you.
+
+    Start the discord bot container, then run in console:
+
+    1. `docker exec -it <container-name-or-id> /bin/bash`
+    2. `gallery-dl oauth:pixiv`
+
+## TODO list:
+
+1. Dynamic welcome message
+2. Subscription to tweets
+3. XKCD feedparser
+4. P/L notification
+5. Get into touhou guide
+6. ORM
+7. Dashboard
