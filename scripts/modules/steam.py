@@ -12,8 +12,8 @@ class Steam(commands.Cog):
 
     @discord.app_commands.command()
     @discord.app_commands.describe(
-        target_domain="Domain of the game site you wish to skip",
-        is_remove="Set to True if you want to remove <targetDomain> in database",
+        target_domain="Domain of the game site you wish to blacklist",
+        is_remove="Set to True if you want to remove <target_domain> from blacklist",
     )
     async def blacklist(
         self,
@@ -21,11 +21,9 @@ class Steam(commands.Cog):
         target_domain: str = None,
         is_remove: bool = False,
     ) -> None:
-        """Blacklisting domains for the find giveaway task."""
+        """Blacklist domains for the find giveaway task."""
         # Delay response, maximum 15 mins
         await ia.response.defer()
-
-        test = await self.bot.application_info()
 
         if target_domain:
             if is_remove:
@@ -91,7 +89,7 @@ class Steam(commands.Cog):
                         """
                     )
                 except:
-                    # TODO: Find out what this part does
+                    # Skip if error found, e.g. record already exists
                     pass
         logger.info("Check giveaway ended.")
 
@@ -101,7 +99,7 @@ class Steam(commands.Cog):
         )
         if channel is None or channel[0]["BotChannel"] is None:
             return None
-        # TODO: Use regex to filter
+        # TODO: Use regex to filter Domain
         results = Util.runSQL(
             """
         SELECT

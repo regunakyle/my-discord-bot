@@ -4,4 +4,4 @@ CREATE TABLE "GuildInfo" (
 	"BotChannel" INTEGER,
 	"LastUpdated" TEXT NOT NULL,
 	PRIMARY KEY("GuildId")
-) STRICT;
+);

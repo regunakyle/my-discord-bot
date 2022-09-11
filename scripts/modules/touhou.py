@@ -2,11 +2,6 @@ from discord.ext import commands
 from ..utility import Utility as Util
 import logging
 
-# TODO: 4 task(s)
-# Get into touhou guide
-# Subscription to certain people, e.g. ZUN
-# Ask trivia question; Validate answer
-# Set/Remove trivia
 logger = logging.getLogger(__name__)
 
 

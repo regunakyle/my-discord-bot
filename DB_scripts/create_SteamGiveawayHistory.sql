@@ -5,4 +5,4 @@ CREATE TABLE "SteamGiveawayHistory" (
 	"ExpiryDate" TEXT,
 	PRIMARY KEY("Title",
 "PublishTime")
-) STRICT;
+);
