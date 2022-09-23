@@ -1,11 +1,22 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.10-slim-buster
+FROM python:3.10-slim AS compile-image
+
+WORKDIR /app
+
+COPY init.sh requirements.txt ./
+
+RUN ./init.sh
+
+FROM python:3.10-slim AS build-image
+COPY --from=compile-image /opt/venv /opt/venv
+COPY --from=compile-image /bin/ffmpeg /bin/ffmpeg
 
 WORKDIR /app
 
 COPY . .
 
-RUN apt -y update && apt install -y ffmpeg sqlite3 nano && pip3 install -r requirements.txt --no-cache-dir && mv .gallery-dl.conf $HOME/.gallery-dl.conf
+RUN mv .gallery-dl.conf /etc/gallery-dl.conf
+ENV PATH=/opt/venv/bin:$PATH
 
-CMD ["python3", "-u", "main.py"]
+CMD ["python", "-u", "main.py"]

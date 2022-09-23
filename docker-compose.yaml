@@ -6,7 +6,6 @@ services:
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN} # Your discord token here
       PREFIX: ">>"
-      PYTHONUNBUFFERED: 1
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
