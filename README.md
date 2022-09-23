@@ -28,7 +28,6 @@ services:
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN} # Your discord token here
       PREFIX: ">>"
-      PYTHONUNBUFFERED: 1
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
@@ -51,7 +50,7 @@ while those in `<angle brackets>` are optional.
 
 Default prefix for old style prefix command is `>>` (Can be changed in `.env` or `docker-compose.yml`).
 
-### `<prefix>sync <option>`
+### `{prefix}sync <option>`
 
 - Reload application commands (i.e. slash commands).
 
@@ -95,7 +94,7 @@ Default prefix for old style prefix command is `>>` (Can be changed in `.env` or
 
 - Show the `<image_number>`th picture (or video) of `[pixiv_link]`.
   - `[pixiv_link]`: Pixiv image link
-  - `<image_number>`: Image number (for albums with multiple images)
+  - `<image_number>`: Image number (for albums with multiple images), by default 1
 - **Important**: To use this command, first install `ffmepg`,
 
   then run (in your python environment): `gallery-dl oauth:pixiv`
@@ -110,9 +109,10 @@ Default prefix for old style prefix command is `>>` (Can be changed in `.env` or
 ## TODO list:
 
 1. Dynamic welcome message
-2. Subscription to tweets
-3. XKCD feedparser
-4. P/L notification
-5. Get into touhou guide
-6. ORM
-7. Dashboard
+2. HSBC/BOCHK/HSB notifications
+3. Jellyfin music player
+4. Subscription to tweets
+5. Get into Touhou guide
+6. P/L notification
+7. XKCD feedparser
+8. ORM + Dashboard

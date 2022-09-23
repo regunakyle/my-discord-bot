@@ -9,7 +9,7 @@ class Utility:
     dotenv = dotenv_values(Path("./.env"))
 
     def connectDB(self) -> ty.Tuple[sqlite3.Connection, sqlite3.Cursor]:
-        """Connect to SQLite3 database, returning the connection and cursor (as tuple)."""
+        """Connect to SQLite3 database, returning the connection and cursor (as a tuple)."""
         cnxn = sqlite3.connect("./volume/db.sqlite3")
 
         def dict_factory(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
@@ -56,7 +56,7 @@ class Utility:
     def getEnvVar(cls, paramName: str) -> str | None:
         """Get the environment variable from .env file.
 
-        If not found in the file (or .env does not exist), get it from system variables instead.
+        If not found in the file (or if .env does not exist), get it from system variables instead.
         """
         if paramName in cls.dotenv:
             return cls.dotenv[paramName]
