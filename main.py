@@ -34,7 +34,7 @@ def main() -> None:
     if not Path("./volume/db.sqlite3").is_file():
         logger.info("Database not found. Creating sqlite database...")
         # Initialize database
-        # Docker Python image uses old version of SQLite, cannot use STRICT keyword
+        # Docker Python image uses Debain version (aka old) of SQLite, cannot use STRICT keyword
         # See pysqlite3 (https://github.com/coleifer/pysqlite3)
 
         cnxn = sqlite3.connect("./volume/db.sqlite3")

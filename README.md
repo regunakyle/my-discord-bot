@@ -48,7 +48,7 @@ Parameters in `[square brackets]` are mandatory,
 
 while those in `<angle brackets>` are optional.
 
-Default prefix for old style prefix command is `>>` (Can be changed in `.env` or `docker-compose.yml`).
+Default prefix for old style prefix command is `>>` (Can be changed in `.env` or `docker-compose.yaml`).
 
 ### `{prefix}sync <option>`
 
@@ -105,14 +105,3 @@ Default prefix for old style prefix command is `>>` (Can be changed in `.env` or
 
     1. `docker exec -it <container-name-or-id> /bin/bash`
     2. `gallery-dl oauth:pixiv`
-
-## TODO list:
-
-1. Dynamic welcome message
-2. HSBC/BOCHK/HSB notifications
-3. Jellyfin music player
-4. Subscription to tweets
-5. Get into Touhou guide
-6. P/L notification
-7. XKCD feedparser
-8. ORM + Dashboard
