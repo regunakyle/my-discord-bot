@@ -4,7 +4,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-
+# TODO: Use async SQLite3 library
 class Utility:
     dotenv = dotenv_values(Path("./.env"))
 

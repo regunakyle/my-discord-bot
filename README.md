@@ -36,11 +36,18 @@ volumes:
     name: dbot-vol
 ```
 
+I suggest you use [Adminer](https://hub.docker.com/_/adminer) or [CloudBeaver](https://hub.docker.com/r/dbeaver/cloudbeaver) alongside the bot for easier database management.
+
 ## Features
 
 1. Notify you when there are new game giveaways
 2. Search for new game giveaways every 2 hours
 3. Also other bot commands...
+
+## TODO List
+
+- [ ] Dynamic welcome message
+- [ ] Subscription to tweets
 
 ## List of bot commands
 

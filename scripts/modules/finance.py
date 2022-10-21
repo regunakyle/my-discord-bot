@@ -23,6 +23,7 @@ class Finance(commands.Cog):
         target_currency: str,
     ) -> None:
         """Convert currency using data from Yahoo Finance."""
+        # TODO: Use an async library
 
         # Delay response, maximum 15 mins
         await ia.response.defer()

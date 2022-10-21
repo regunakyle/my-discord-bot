@@ -1,7 +1,7 @@
 from discord.ext import commands
 from pathlib import Path
 from ..utility import Utility as Util
-import subprocess, re, discord, os, typing as ty, yfinance as yf, logging
+import re, discord, typing as ty, logging, asyncio, subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -33,16 +33,21 @@ class General(commands.Cog):
         image_number: int = 1,
     ) -> None:
         """Show the <image_number>th picture (or video) of [pixiv_link]."""
-        link = (
-            re.compile(r"(www\.pixiv\.net\/(?:en\/)?artworks\/[0-9]+)")
-            .search(pixiv_link)
-            .group()
+
+        match = re.compile(r"(www\.pixiv\.net\/(?:en\/)?artworks\/[0-9]+)").search(
+            pixiv_link
         )
+        if match is None:
+            await ia.response.send_message("You link is invalid!")
+            return
+
+        link = match.group()
 
         # Delay response, maximum 15 mins
         await ia.response.defer()
 
         command = ["gallery-dl", link, "--range", str(image_number), "--ugoira-conv"]
+        # TODO: Use async subprocess
         result = subprocess.run(command, capture_output=True, text=True)
         if len(result.stdout) == 0:
             await ia.followup.send(

@@ -50,7 +50,7 @@ class discordBot(commands.Bot):
             activity=activity,
             description=description,
         )
-        # Disable prefixed help command, use slash command instead
+        # Disable prefixed help command, use /help instead
         self.help_command = None
 
     async def on_ready(self) -> None:

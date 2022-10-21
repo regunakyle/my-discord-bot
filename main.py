@@ -1,6 +1,5 @@
 from scripts.bot import discordBot
 from pathlib import Path
-from dotenv import dotenv_values
 from scripts.utility import Utility as Util
 import discord, logging, sqlite3
 from logging.handlers import TimedRotatingFileHandler
@@ -52,7 +51,7 @@ def main() -> None:
     intents.members = True
     intents.message_content = True
 
-    activity = discord.Game(name=f"/help")
+    activity = discord.Game(name="/help")
 
     description = "Discord bot for self use. \nWritten in Python using discord.py."
 
