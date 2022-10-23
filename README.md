@@ -37,7 +37,7 @@ services:
       LAVALINK_IP: ${LAVALINK_IP}
       LAVALINK_PORT: ${LAVALINK_PORT}
       LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
-      PREFIX: ">>"
+      PREFIX: ${PREFIX}
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
@@ -47,8 +47,6 @@ services:
     environment:
       server.port: ${LAVALINK_PORT}
       lavalink.server.password: ${LAVALINK_PASSWORD}
-    ports:
-      - ${LAVALINK_PORT}:${LAVALINK_PORT}
     restart: unless-stopped
 
 volumes:
