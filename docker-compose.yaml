@@ -1,14 +1,32 @@
 version: "3.9"
+
 services:
   discordbot:
     container_name: discordbot
     image: regunakyle/discordbot
     environment:
-      DISCORD_TOKEN: ${DISCORD_TOKEN} # Your discord token here
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      LAVALINK_IP: ${LAVALINK_IP}
+      LAVALINK_PORT: ${LAVALINK_PORT}
+      LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
       PREFIX: ">>"
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
+  lavalink:
+    container_name: lavalink
+    image: fredboat/lavalink
+    environment:
+      server.port: ${LAVALINK_PORT}
+      lavalink.server.password: ${LAVALINK_PASSWORD}
+    ports:
+      - ${LAVALINK_PORT}:${LAVALINK_PORT}
+    restart: unless-stopped
+
 volumes:
   dbot-vol:
     name: dbot-vol
+
+networks:
+  default:
+    name: discord-bot-network

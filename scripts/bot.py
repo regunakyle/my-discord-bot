@@ -7,8 +7,8 @@ from .utility import Utility as Util
 from .modules.steam import Steam
 from .modules.meta import Meta
 from .modules.general import General
-from .modules.touhou import Touhou
-from .modules.stock import Stock
+from .modules.finance import Finance
+from .modules.music import Music
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class discordBot(commands.Bot):
             activity=activity,
             description=description,
         )
-        # Disable prefixed help command, use slash command instead
+        # Disable prefixed help command, use /help instead
         self.help_command = None
 
     async def on_ready(self) -> None:
@@ -59,10 +59,9 @@ class discordBot(commands.Bot):
         await self.add_cog(Steam(self))
         await self.add_cog(Meta(self))
         await self.add_cog(General(self))
-        await self.add_cog(Touhou(self))
-        await self.add_cog(Stock(self))
+        await self.add_cog(Finance(self))
+        await self.add_cog(Music(self))
 
-    # TODO: Dynamic welcome message
     async def on_member_join(self, member: discord.member) -> None:
         channel = member.guild.system_channel
         if channel is not None:

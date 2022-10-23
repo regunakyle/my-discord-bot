@@ -1,7 +1,7 @@
 from discord.ext import commands
 from pathlib import Path
 from ..utility import Utility as Util
-import subprocess, re, discord, os, typing as ty, yfinance as yf, logging
+import re, discord, typing as ty, logging, asyncio, subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -23,47 +23,6 @@ class General(commands.Cog):
 
     @discord.app_commands.command()
     @discord.app_commands.describe(
-        amount="Amount in <starting_currency>, ranged from 0 to 1,000,000,000",
-        starting_currency="Starting currency, e.g. HKD",
-        target_currency="Target currency, e.g. USD",
-    )
-    async def forex(
-        self,
-        ia: discord.Interaction,
-        amount: float,
-        starting_currency: str,
-        target_currency: str,
-    ) -> None:
-        """Convert currency using data from Yahoo Finance."""
-
-        # Delay response, maximum 15 mins
-        await ia.response.defer()
-
-        forex = (
-            f"{starting_currency}{target_currency}=X"
-            if starting_currency.lower() != "usd"
-            else f"{target_currency}=X"
-        )
-        try:
-            assert 0 <= float(amount) < 1e10
-            newAmt = round(
-                yf.Ticker(forex).history("1d").iloc[0]["Close"] * float(amount), 2
-            )
-            await ia.followup.send(
-                f"{amount} {starting_currency} = {str(newAmt)} {target_currency}",
-            )
-        except AssertionError as e:
-            await ia.followup.send(
-                "Please enter a value between 0 and 1,000,000,000.",
-            )
-        except Exception as e:
-            logger.error(e)
-            await ia.followup.send(
-                "Something went wrong. Most likely you inputted nonexistent currency code(s).",
-            )
-
-    @discord.app_commands.command()
-    @discord.app_commands.describe(
         pixiv_link="Pixiv image link",
         image_number="Image number (for albums with multiple images); 1 by default",
     )
@@ -74,16 +33,21 @@ class General(commands.Cog):
         image_number: int = 1,
     ) -> None:
         """Show the <image_number>th picture (or video) of [pixiv_link]."""
-        link = (
-            re.compile(r"(www\.pixiv\.net\/(?:en\/)?artworks\/[0-9]+)")
-            .search(pixiv_link)
-            .group()
+
+        match = re.compile(r"(www\.pixiv\.net\/(?:en\/)?artworks\/[0-9]+)").search(
+            pixiv_link
         )
+        if match is None:
+            await ia.response.send_message("You link is invalid!")
+            return
+
+        link = match.group()
 
         # Delay response, maximum 15 mins
         await ia.response.defer()
 
         command = ["gallery-dl", link, "--range", str(image_number), "--ugoira-conv"]
+        # TODO: Use async subprocess
         result = subprocess.run(command, capture_output=True, text=True)
         if len(result.stdout) == 0:
             await ia.followup.send(

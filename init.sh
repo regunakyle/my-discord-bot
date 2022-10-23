@@ -3,7 +3,6 @@ set -eu -o pipefail
 
 # Get essential tools from apt repo
 apt -y update
-apt -y upgrade
 apt install -y --no-install-recommends curl xz-utils
 
 dir_name=ffmpeg
