@@ -11,7 +11,6 @@ def main() -> None:
     Path("./volume/gallery-dl").mkdir(parents=True, exist_ok=True)
 
     # Time Rotating File Handler
-    # TODO: Use local time
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     logHandler = TimedRotatingFileHandler(
@@ -19,6 +18,7 @@ def main() -> None:
         when="D",
         backupCount=10,
         encoding="utf-8",
+        utc=True,
     )
     logHandler.setFormatter(
         logging.Formatter(

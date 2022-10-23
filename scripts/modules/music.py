@@ -1,8 +1,8 @@
-from discord.ext import commands
-
+from discord.ext import commands, tasks
 from ..utility import Utility as Util
 from pathlib import Path
 from enum import Enum, auto
+from functools import wraps
 import discord, typing as ty, logging, wavelink
 
 logger = logging.getLogger(__name__)
@@ -29,21 +29,43 @@ class REASON(Enum):
 class Music(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.bot.loop.create_task(self.connect_nodes())
         # Assume there is only one node: use this for node.get_tracks()
         self.node: wavelink.Node | None = None
+        self.checkNodeConnectionTask.start()
 
-    async def isUserBotSameChannel(self, ctx: commands.Context) -> bool:
+    @tasks.loop(seconds=30)
+    async def checkNodeConnectionTask(self) -> None:
+        if not self.node:
+            await self.connect_nodes()
+
+    async def isUserBotSameChannel(self, ia: discord.Interaction) -> bool:
         """Return True if the user is in the same channel as the bot."""
-        vc = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        vc = discord.utils.get(self.bot.voice_clients, guild=ia.guild)
         if vc:
-            return vc.channel.id == ctx.author.voice.channel.id
+            return vc.channel.id == ia.user.voice.channel.id
         else:
-            return False
+            return True
+
+    @staticmethod
+    def checkNodeDecorator(func: ty.Callable) -> ty.Callable:
+        """Check for self.node. If it is None, send error message."""
+
+        @wraps(func)
+        async def _wrapper(*args, **kwargs):
+            # args[0] is self, args[1] is an discord.Interaction object
+            if not args[0].node:
+                await args[1].response.send_message(
+                    "Music playing server is offline! Please notify the bot owner of the issue!"
+                )
+            else:
+                await func(*args, **kwargs)
+
+        return _wrapper
 
     async def connect_nodes(self) -> None:
         """Connect to a Lavalink node."""
         await self.bot.wait_until_ready()
+        logger.info("Attempting to connect to a node...")
         await wavelink.NodePool.create_node(
             bot=self.bot,
             host=Util.getEnvVar("LAVALINK_IP"),
@@ -51,55 +73,66 @@ class Music(commands.Cog):
             password=Util.getEnvVar("LAVALINK_PASSWORD"),
         )
 
-    @commands.command()
-    async def play(self, ctx: commands.Context, *, url: str) -> None:
+    @discord.app_commands.command()
+    @discord.app_commands.describe(
+        youtube_url="URL of the Youtube video you want to play.",
+    )
+    @checkNodeDecorator
+    async def play(self, ia: discord.Interaction, youtube_url: str) -> None:
         """Play a song with the given search query.
 
         If not connected, connect to our voice channel.
         """
 
         # User must be in a voice channel
-        if not ctx.author.voice:
-            await ctx.send("You must be in a voice channel to use this command!")
+        if not ia.user.voice:
+            await ia.response.send_message(
+                "You must be in a voice channel to use this command!"
+            )
             return
 
         # (If the bot is already in a voice channel)
         # The user needs to be in the same voice channel as the bot
-        if not await self.isUserBotSameChannel(ctx):
-            await ctx.send(
+        if not await self.isUserBotSameChannel(ia):
+            await ia.response.send_message(
                 "You must be in the same voice channel with me to use this command!"
             )
             return
 
-        try:
-            track = await self.node.get_tracks(
-                query=url,
-                cls=wavelink.YouTubeTrack,
-            )
-            vc: wavelink.Player = (
-                ctx.voice_client
-                or await ctx.author.voice.channel.connect(cls=wavelink.Player)
-            )
+        # Delay response, maximum 15 mins
+        await ia.response.defer()
 
-            await vc.queue.put_wait(track[0])
-            if not vc.is_playing():
-                await vc.play(await vc.queue.get_wait())
+        tracks = await self.node.get_tracks(
+            query=youtube_url,
+            cls=wavelink.YouTubeTrack,
+        )
+        vc: wavelink.Player = (
+            ia.guild.voice_client
+            or await ia.user.voice.channel.connect(cls=wavelink.Player)
+        )
 
-        except Exception as e:
-            print(e)
+        if not tracks:
+            await ia.followup.send("Your link is invalid!")
+            return
 
-    @commands.command()
-    async def show(self, ctx: commands.Context) -> None:
-        """Show all queued songs. Maximum of 10 songs are displayed."""
-        if not ctx.voice_client:
-            ctx.send("I am not in a voice channel!")
+        await vc.queue.put_wait(tracks[0])
+        await ia.followup.send(f"Song *{tracks[0].title}* added to queue!")
+        if not vc.is_playing():
+            await vc.play(await vc.queue.get_wait())
+
+    @discord.app_commands.command()
+    @checkNodeDecorator
+    async def queue(self, ia: discord.Interaction) -> None:
+        """Show all queued songs. A maximum of 20 songs are displayed."""
+        if not ia.guild.voice_client:
+            await ia.response.send_message("I am not in a voice channel!")
             return
         else:
-            vc: wavelink.Player = ctx.voice_client
+            vc: wavelink.Player = ia.guild.voice_client
 
         # TODO: Find a way to add requester into track object
         embedDict = {
-            "title": f"Queue for server {ctx.guild.name}",
+            "title": f"Queue for server {ia.guild.name}",
             "description": "",
             "color": 65535,
             "thumbnail": {"url": "attachment://music.png"},
@@ -127,6 +160,8 @@ class Music(commands.Cog):
             ],
         }
         for index, item in enumerate(vc.queue):
+            if index >= 20:
+                break
             embedDict[
                 "description"
             ] += f"{index+1}. ({int(item.duration // 60)}:{int(item.duration % 60)}) [{item.title}]({item.uri})\n"
@@ -134,64 +169,71 @@ class Music(commands.Cog):
             embedDict["fields"][0][
                 "value"
             ] = f"[{vc.track.title}]({vc.track.uri}) ({int(vc.track.duration//60)}:{int(vc.track.duration % 60)})"
-        await ctx.send(
+        await ia.response.send_message(
             embed=discord.Embed.from_dict(embedDict),
             file=discord.File("./assets/images/music.png", filename="music.png"),
         )
 
-    @commands.command()
-    async def pause(self, ctx: commands.Context) -> None:
+    @discord.app_commands.command()
+    @checkNodeDecorator
+    async def pause(self, ia: discord.Interaction) -> None:
         """Pause the music player if it is playing."""
-        if not ctx.voice_client:
-            ctx.send("I am not in a voice channel!")
+        if not ia.guild.voice_client:
+            await ia.response.send_message("I am not in a voice channel!")
             return
         else:
-            vc: wavelink.Player = ctx.voice_client
+            vc: wavelink.Player = ia.guild.voice_client
 
-        if not await self.isUserBotSameChannel(ctx):
-            await ctx.send(
+        if not await self.isUserBotSameChannel(ia):
+            await ia.response.send_message(
                 "You must be in the same voice channel with me to use this command!"
             )
             return
 
         if vc.is_paused():
             await vc.resume()
+            await ia.response.send_message("Music player resumed!")
         else:
             await vc.pause()
+            await ia.response.send_message("Music player paused!")
 
-    @commands.command()
-    async def skip(self, ctx: commands.Context) -> None:
+    @discord.app_commands.command()
+    @checkNodeDecorator
+    async def skip(self, ia: discord.Interaction) -> None:
         """Stop and skip the currently playing song."""
-        if not ctx.voice_client:
-            ctx.send("I am not in a voice channel!")
+        if not ia.guild.voice_client:
+            await ia.response.send_message("I am not in a voice channel!")
             return
         else:
-            vc: wavelink.Player = ctx.voice_client
+            vc: wavelink.Player = ia.guild.voice_client
 
-        if not await self.isUserBotSameChannel(ctx):
-            await ctx.send(
+        if not await self.isUserBotSameChannel(ia):
+            await ia.response.send_message(
                 "You must be in the same voice channel with me to use this command!"
             )
             return
 
         if vc.is_playing():
+            await ia.response.send_message("Skipping the current song...")
             await vc.stop()
 
-    @commands.command()
-    async def quit(self, ctx: commands.Context) -> None:
-        """Make the bot quit the voice channel. Song queue is cleared."""
-        if not ctx.voice_client:
-            await ctx.send("I am not in a voice channel!")
+    @discord.app_commands.command()
+    @checkNodeDecorator
+    async def quit(self, ia: discord.Interaction) -> None:
+        """Make the bot quit the voice channel. Song queue is also cleared."""
+        if not ia.guild.voice_client:
+            await ia.response.send_message("I am not in a voice channel!")
             return
         else:
-            vc: wavelink.Player = ctx.voice_client
+            vc: wavelink.Player = ia.guild.voice_client
 
-        if not await self.isUserBotSameChannel(ctx):
-            await ctx.send(
+        if not await self.isUserBotSameChannel(ia):
+            await ia.response.send_message(
                 "You must be in the same voice channel with me to use this command!"
             )
             return
 
+        await ia.response.send_message("Ready to leave. Goodbye!")
         vc.queue.reset()
         await vc.disconnect()
 
@@ -230,10 +272,15 @@ class Music(commands.Cog):
         self, player: wavelink.Player, track: wavelink.Track
     ) -> None:
         """Event fired after a node started playing a song."""
-        # TODO: If no other user presents, quit and clear queue
-        if len(player.channel.members) <= 1:
-            player.queue.reset()
-            await player.channel.send("Quitting because I am alone...")
-            await player.disconnect()
-            return
-        await player.channel.send(f"Now playing *{track.title}*!", delete_after=60)
+        # If no other non-bot user presents, quit and clear queue
+        for member in player.channel.members:
+            if not member.bot:
+                await player.channel.send(
+                    f"Now playing *{track.title}*!", delete_after=30
+                )
+                return
+
+        player.queue.reset()
+        await player.channel.send("Quitting because I am alone...")
+        await player.disconnect()
+        return

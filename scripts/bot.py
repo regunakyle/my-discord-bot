@@ -62,7 +62,6 @@ class discordBot(commands.Bot):
         await self.add_cog(Finance(self))
         await self.add_cog(Music(self))
 
-    # TODO: Dynamic welcome message
     async def on_member_join(self, member: discord.member) -> None:
         channel = member.guild.system_channel
         if channel is not None:

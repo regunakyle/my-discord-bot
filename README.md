@@ -14,26 +14,50 @@ Data are stored in an embedded sqlite3 database file.
 
 4. Run `python main.py` in your console to start up the bot.
 
+5. To use the music player, you should download [Lavalink](https://github.com/freyacodes/Lavalink) and run it alongside the Discord bot.
+
+   The config for Lavalink can also be found in `.env`.
+
 ## Docker Compose
 
-If you prefer Docker, you can use the following Docker Compose:
+If you prefer Docker, you can use the following Docker Compose.
+
+Please refer to [this guide](https://docs.docker.com/compose/environment-variables/) for how to set the necessary environment variables.
 
 ```yaml
 ---
 version: "3.9"
+
 services:
   discordbot:
     container_name: discordbot
     image: regunakyle/discordbot
     environment:
-      DISCORD_TOKEN: ${DISCORD_TOKEN} # Your discord token here
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      LAVALINK_IP: ${LAVALINK_IP}
+      LAVALINK_PORT: ${LAVALINK_PORT}
+      LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
       PREFIX: ">>"
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
+  lavalink:
+    container_name: lavalink
+    image: fredboat/lavalink
+    environment:
+      server.port: ${LAVALINK_PORT}
+      lavalink.server.password: ${LAVALINK_PASSWORD}
+    ports:
+      - ${LAVALINK_PORT}:${LAVALINK_PORT}
+    restart: unless-stopped
+
 volumes:
   dbot-vol:
     name: dbot-vol
+
+networks:
+  default:
+    name: discord-bot-network
 ```
 
 I suggest you use [Adminer](https://hub.docker.com/_/adminer) or [CloudBeaver](https://hub.docker.com/r/dbeaver/cloudbeaver) alongside the bot for easier database management.
@@ -42,14 +66,17 @@ I suggest you use [Adminer](https://hub.docker.com/_/adminer) or [CloudBeaver](h
 
 1. Notify you when there are new game giveaways
 2. Search for new game giveaways every 2 hours
-3. Also other bot commands...
+3. Also other bot commands (including a music player)...
 
 ## TODO List
 
 - [ ] Dynamic welcome message
 - [ ] Subscription to tweets
+- [ ] Music bot commands:
+  - [ ] Loop
+  - [ ] Move
 
-## List of bot commands
+## List of bot commands (Not updated)
 
 Parameters in `[square brackets]` are mandatory,
 
