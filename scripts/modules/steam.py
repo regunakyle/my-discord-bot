@@ -62,9 +62,10 @@ class Steam(commands.Cog):
         await ia.followup.send(blacklist)
 
     # Schedule Job Scripts Start
-    async def checkGiveaway(self) -> None:
+    def checkGiveaway(self) -> None:
         logger.info("Fetching data from isthereanydeal.com...")
         datePattern = re.compile(r"[eE]xpires? on (\d{4}-\d{2}-\d{2})")
+        # TODO: Use aiohttp to get RSS file, then pass it to feedparser
         rss = feedparser.parse("https://isthereanydeal.com/rss/specials/us")
         for entry in rss.entries:
             if "giveaway" in entry["title"] and "expired" not in entry["summary"]:
@@ -89,7 +90,7 @@ class Steam(commands.Cog):
                         """
                     )
                 except:
-                    # Skip if error found, e.g. record already exists
+                    # Skip if error occurs, e.g. record already exists
                     pass
         logger.info("Check giveaway ended.")
 
@@ -140,7 +141,7 @@ class Steam(commands.Cog):
 
     @tasks.loop(hours=2)
     async def giveawayTask(self) -> None:
-        await self.checkGiveaway()
+        self.checkGiveaway()
         for guild in self.bot.guilds:
             newList = self.getNewGiveaway(guild.id)
             if newList == None:

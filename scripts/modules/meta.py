@@ -13,15 +13,6 @@ class Meta(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def test(
-        self,
-        ctx: commands.Context,
-    ) -> None:
-        """Prefix command for debugging."""
-        await ctx.send("TEST")
-
-    @commands.command()
-    @commands.guild_only()
     async def sync(
         self,
         ctx: commands.Context,
