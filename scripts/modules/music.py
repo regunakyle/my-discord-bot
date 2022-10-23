@@ -106,14 +106,15 @@ class Music(commands.Cog):
             query=youtube_url,
             cls=wavelink.YouTubeTrack,
         )
-        vc: wavelink.Player = (
-            ia.guild.voice_client
-            or await ia.user.voice.channel.connect(cls=wavelink.Player)
-        )
 
         if not tracks:
             await ia.followup.send("Your link is invalid!")
             return
+
+        vc: wavelink.Player = (
+            ia.guild.voice_client
+            or await ia.user.voice.channel.connect(cls=wavelink.Player)
+        )
 
         await vc.queue.put_wait(tracks[0])
         await ia.followup.send(f"Song *{tracks[0].title}* added to queue!")
@@ -241,6 +242,8 @@ class Music(commands.Cog):
     async def on_wavelink_node_ready(self, node: wavelink.Node) -> None:
         """Event fired when a node has finished connecting."""
         self.node = node
+        # Forces new Player objects to use this node
+        wavelink.NodePool._nodes = {node.identifier: node}
         logger.info(f"Node: <{node.identifier}> is ready!")
 
     @commands.Cog.listener()
