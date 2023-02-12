@@ -9,6 +9,8 @@ services:
       LAVALINK_IP: ${LAVALINK_IP}
       LAVALINK_PORT: ${LAVALINK_PORT}
       LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      DISABLE_MODULE: ${DISABLE_MODULE}
       PREFIX: ${PREFIX}
     volumes:
       - dbot-vol:/app/volume

@@ -63,7 +63,7 @@ class discordBot(commands.Bot):
 
         # Disable cogs as specified in .env
         for module in [Steam, Meta, General, Finance, Music]:
-            if module.__name__.lower() not in Util.getEnvVar("DISABLED_MODULE").lower():
+            if module.__name__.lower() not in Util.getEnvVar("DISABLE_MODULE").lower():
                 await self.add_cog(module(self))
 
     async def on_member_join(self, member: discord.member) -> None:
