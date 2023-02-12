@@ -1,6 +1,6 @@
 # Reguna's Discord Bot
 
-Written in Python 3.10 using [discord.py](https://github.com/Rapptz/discord.py).
+Written in Python 3.11 using [discord.py](https://github.com/Rapptz/discord.py).
 
 Data are stored in an embedded sqlite3 database file.
 
@@ -69,10 +69,12 @@ I suggest you use [Adminer](https://hub.docker.com/_/adminer) or [CloudBeaver](h
 ## TODO List
 
 - [ ] Dynamic welcome message
-- [ ] Subscription to tweets
+- [ ] Add Spotify support
 - [ ] Music bot commands:
   - [ ] Loop
   - [ ] Move
+- [ ] Use an ORM for easier database management
+- [ ] Create a dashboard for the bot
 
 ## List of bot commands (Not updated)
 

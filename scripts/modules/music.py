@@ -1,11 +1,19 @@
-from discord.ext import commands, tasks
-from ..utility import Utility as Util
-from pathlib import Path
+import asyncio
+import logging
+import typing as ty
 from enum import Enum, auto
 from functools import wraps
-import discord, typing as ty, logging, wavelink
+from pathlib import Path
+
+import discord
+import wavelink
+from discord.ext import commands, tasks
+
+from ..utility import Utility as Util
 
 logger = logging.getLogger(__name__)
+
+# TODO: Periodically check the count of non-bot members in the same voice channel, quit if it's 0
 
 
 class REASON(Enum):
@@ -36,7 +44,7 @@ class Music(commands.Cog):
     @tasks.loop(seconds=30)
     async def checkNodeConnectionTask(self) -> None:
         if not self.node:
-            await self.connect_nodes()
+            await self.create_node()
 
     async def isUserBotSameChannel(self, ia: discord.Interaction) -> bool:
         """Return True if the user is in the same channel as the bot."""
@@ -62,7 +70,7 @@ class Music(commands.Cog):
 
         return _wrapper
 
-    async def connect_nodes(self) -> None:
+    async def create_node(self) -> None:
         """Connect to a Lavalink node."""
         await self.bot.wait_until_ready()
         logger.info("Attempting to connect to a node...")
@@ -71,6 +79,30 @@ class Music(commands.Cog):
             host=Util.getEnvVar("LAVALINK_IP"),
             port=Util.getEnvVar("LAVALINK_PORT"),
             password=Util.getEnvVar("LAVALINK_PASSWORD"),
+        )
+
+    @discord.app_commands.command()
+    async def connect_node(
+        self,
+        ia: discord.Interaction,
+    ) -> None:
+        """Connect to a new node. Use this if the music player is not working.
+
+        Do NOT use this when the bot is playing music."""
+
+        # Delay response, maximum 15 mins
+        await ia.response.defer()
+
+        oldNode = self.node
+
+        await self.create_node()
+
+        # Wait for node update
+        while oldNode.identifier == self.node.identifier:
+            await asyncio.sleep(0.5)
+
+        await ia.followup.send(
+            f"Identifier of old node: <{oldNode.identifier}>\nIdentifier of new node: <{self.node.identifier}>"
         )
 
     @discord.app_commands.command()
@@ -91,7 +123,7 @@ class Music(commands.Cog):
             )
             return
 
-        # (If the bot is already in a voice channel)
+        # If the bot is already in a voice channel
         # The user needs to be in the same voice channel as the bot
         if not await self.isUserBotSameChannel(ia):
             await ia.response.send_message(
@@ -242,7 +274,7 @@ class Music(commands.Cog):
     async def on_wavelink_node_ready(self, node: wavelink.Node) -> None:
         """Event fired when a node has finished connecting."""
         self.node = node
-        # Forces new Player objects to use this node
+        # Forces new Player objects to use this node (hack)
         wavelink.NodePool._nodes = {node.identifier: node}
         logger.info(f"Node: <{node.identifier}> is ready!")
 
@@ -264,9 +296,7 @@ class Music(commands.Cog):
                 return
         else:
             player.queue.reset()
-            await player.channel.send(
-                "Something went wrong(?), I will be quitting now..."
-            )
+            await player.channel.send("Something went wrong, I will be quitting now...")
             await player.disconnect()
             return
 

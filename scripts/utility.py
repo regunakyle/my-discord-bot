@@ -1,8 +1,13 @@
-import sqlite3, logging, typing as ty, os
-from dotenv import dotenv_values
+import logging
+import os
+import sqlite3
+import typing as ty
 from pathlib import Path
 
+from dotenv import dotenv_values
+
 logger = logging.getLogger(__name__)
+
 
 # TODO: Use async SQLite3 library
 class Utility:
@@ -61,3 +66,19 @@ class Utility:
         if paramName in cls.dotenv:
             return cls.dotenv[paramName]
         return os.getenv(paramName)
+
+    @classmethod
+    def getMaxFileSize(cls, nitroCount: int = 0) -> int:
+        """Return the maximum file size (in MiB) supported by the current guild.
+
+        If MAX_FILE_SIZE in .env is smaller than this size, return MAX_FILE_SIZE instead.
+        """
+        if nitroCount < 7:
+            maxSize = 8
+        elif nitroCount < 14:
+            maxSize = 16
+
+        try:
+            return min(maxSize, abs(int(cls.getEnvVar("MAX_FILE_SIZE"))))
+        except:
+            return maxSize

@@ -1,14 +1,18 @@
-import discord, logging, typing as ty
-from discord.ext import commands
+import logging
+import typing as ty
 from pathlib import Path
-from .utility import Utility as Util
+
+import discord
+from discord.ext import commands
+
+from .modules.finance import Finance
+from .modules.general import General
+from .modules.meta import Meta
+from .modules.music import Music
 
 # Modules
 from .modules.steam import Steam
-from .modules.meta import Meta
-from .modules.general import General
-from .modules.finance import Finance
-from .modules.music import Music
+from .utility import Utility as Util
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +60,11 @@ class discordBot(commands.Bot):
     async def on_ready(self) -> None:
         logger.info(f"Logged in as {self.user.name} ({str(self.user.id)}).")
         await self.add_cog(ErrorHandler(self))
-        await self.add_cog(Steam(self))
-        await self.add_cog(Meta(self))
-        await self.add_cog(General(self))
-        await self.add_cog(Finance(self))
-        await self.add_cog(Music(self))
+
+        # Disable cogs as specified in .env
+        for module in [Steam, Meta, General, Finance, Music]:
+            if module.__name__.lower() not in Util.getEnvVar("DISABLED_MODULE").lower():
+                await self.add_cog(module(self))
 
     async def on_member_join(self, member: discord.member) -> None:
         channel = member.guild.system_channel
