@@ -73,6 +73,9 @@ class Utility:
 
         If MAX_FILE_SIZE in .env is smaller than this size, return MAX_FILE_SIZE instead.
         """
+
+        # Nitro level and their maximum upload size
+        maxSize = 100
         if nitroCount < 7:
             maxSize = 8
         elif nitroCount < 14:
