@@ -1,5 +1,14 @@
-import feedparser, datetime as dt, re, csv, discord, typing as ty, logging, io
+import csv
+import io
+import logging
+import re
+import time
+import typing as ty
+
+import discord
+import feedparser
 from discord.ext import commands, tasks
+
 from ..utility import Utility as Util
 
 logger = logging.getLogger(__name__)
@@ -27,13 +36,21 @@ class Steam(commands.Cog):
 
         if target_domain:
             if is_remove:
-                Util.runSQL(
-                    "DELETE FROM SteamBlacklist WHERE Keyword = ?",
+                if Util.runSQL(
+                    "SELECT 1 FROM SteamBlacklist WHERE Keyword = ?",
                     [target_domain.lower()],
-                )
-                await ia.followup.send(
-                    f"If ***{target_domain.lower()}*** is in database, it should be deleted.",
-                )
+                ):
+                    Util.runSQL(
+                        "DELETE FROM SteamBlacklist WHERE Keyword = ?",
+                        [target_domain.lower()],
+                    )
+                    await ia.followup.send(
+                        f"The keyword ***{target_domain.lower()}*** is deleted from database.",
+                    )
+                else:
+                    await ia.followup.send(
+                        f"Keyword ***{target_domain.lower()}*** not found.",
+                    )
             else:
                 try:
                     Util.runSQL(
@@ -48,6 +65,7 @@ class Steam(commands.Cog):
                     await ia.followup.send(
                         "Insert keyword failed: Probably because this keyword already exists in the database.",
                     )
+                    return
         result = Util.runSQL(
             "SELECT rowid,* FROM SteamBlacklist WHERE GuildId = ?",
             [ia.guild.id],
@@ -65,13 +83,13 @@ class Steam(commands.Cog):
     def checkGiveaway(self) -> None:
         logger.info("Fetching data from isthereanydeal.com...")
         datePattern = re.compile(r"[eE]xpires? on (\d{4}-\d{2}-\d{2})")
-        # TODO: Use aiohttp to get RSS file, then pass it to feedparser
+        # TODO: Use an async library to get RSS file, then pass it to feedparser
         rss = feedparser.parse("https://isthereanydeal.com/rss/specials/us")
         for entry in rss.entries:
             if "giveaway" in entry["title"] and "expired" not in entry["summary"]:
                 # Time in UTC +0
-                publishTime = dt.datetime.strftime(
-                    (dt.datetime(*entry["published_parsed"][:6])), r"%Y-%m-%d"
+                publishTime = time.strftime(
+                    r"%Y-%m-%d %H:%M:%S", entry["published_parsed"]
                 )
                 expiryDate = (
                     datePattern.search(entry["summary"]).group(1)
@@ -139,7 +157,7 @@ class Steam(commands.Cog):
             filteredResults = None
         return channel[0]["BotChannel"], filteredResults
 
-    @tasks.loop(hours=2)
+    @tasks.loop(hours=12)
     async def giveawayTask(self) -> None:
         self.checkGiveaway()
         for guild in self.bot.guilds:

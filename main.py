@@ -1,8 +1,12 @@
-from scripts.bot import discordBot
-from pathlib import Path
-from scripts.utility import Utility as Util
-import discord, logging, sqlite3
+import logging
+import sqlite3
 from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
+
+import discord
+
+from scripts.bot import discordBot
+from scripts.utility import Utility as Util
 
 
 def main() -> None:
@@ -14,11 +18,7 @@ def main() -> None:
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     logHandler = TimedRotatingFileHandler(
-        Path("./volume/logs/discord.log"),
-        when="D",
-        backupCount=10,
-        encoding="utf-8",
-        utc=True,
+        Path("./volume/logs/discord.log"), when="D", backupCount=10, encoding="utf-8"
     )
     logHandler.setFormatter(
         logging.Formatter(
@@ -33,7 +33,7 @@ def main() -> None:
     if not Path("./volume/db.sqlite3").is_file():
         logger.info("Database not found. Creating sqlite database...")
         # Initialize database
-        # Docker Python image uses Debain version (aka old) of SQLite, cannot use STRICT keyword
+        # Docker Python image uses Debain (aka old) version of SQLite, so cannot use STRICT keyword
         # See pysqlite3 (https://github.com/coleifer/pysqlite3)
 
         cnxn = sqlite3.connect("./volume/db.sqlite3")

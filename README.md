@@ -1,6 +1,6 @@
 # Reguna's Discord Bot
 
-Written in Python 3.10 using [discord.py](https://github.com/Rapptz/discord.py).
+Written in Python 3.11 using [discord.py](https://github.com/Rapptz/discord.py).
 
 Data are stored in an embedded sqlite3 database file.
 
@@ -37,6 +37,8 @@ services:
       LAVALINK_IP: ${LAVALINK_IP}
       LAVALINK_PORT: ${LAVALINK_PORT}
       LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      DISABLE_MODULE: ${DISABLE_MODULE}
       PREFIX: ${PREFIX}
     volumes:
       - dbot-vol:/app/volume
@@ -58,23 +60,24 @@ networks:
     name: discord-bot-network
 ```
 
-I suggest you use [Adminer](https://hub.docker.com/_/adminer) or [CloudBeaver](https://hub.docker.com/r/dbeaver/cloudbeaver) alongside the bot for easier database management.
-
 ## Features
 
-1. Notify you when there are new game giveaways
-2. Search for new game giveaways every 2 hours
-3. Also other bot commands (including a music player)...
+1. Notify you when there are free game giveaways
+2. A music player to play Youtube video inside a voice channel
+3. Fun bot commands that might interest you (e.g. Currency convertion, Posting raw Pixiv images)
 
 ## TODO List
 
 - [ ] Dynamic welcome message
-- [ ] Subscription to tweets
+- [ ] Add Spotify support
 - [ ] Music bot commands:
   - [ ] Loop
   - [ ] Move
+- [ ] Use an ORM for easier database management
+- [ ] Support for PostgreSQL
+- [ ] Create a dashboard for the bot
 
-## List of bot commands (Not updated)
+## Notable commands
 
 Parameters in `[square brackets]` are mandatory,
 
@@ -105,23 +108,6 @@ Default prefix for old style prefix command is `>>` (Can be changed in `.env` or
 
   - `<is_unset>`: Set to `True` if you want to unmark the subscription channel
 
-### `/blacklist <target_domain> <is_remove>`
-
-- Blacklist domains for the find giveaway task.
-
-  No notification will be sent for blacklisted domains.
-
-  - `<target_domain>`: Domain of the game site you wish to blacklist
-
-  - `<is_remove>`: Set to `True` if you want to remove `<target_domain>` from blacklist
-
-### `/forex [amount] [starting currency] [target currency]`
-
-- Convert currency using data from Yahoo Finance.
-  - `[amount]`: Amount in `[starting_currency]`, ranged from 0 to 1,000,000,000
-  - `[starting_currency]`: Starting currency, e.g. `HKD`
-  - `[target_currency]`: Target currency, e.g. `JPY`
-
 ### `/pixiv [pixiv_link] <image_number>`
 
 - Show the `<image_number>`th picture (or video) of `[pixiv_link]`.
@@ -137,3 +123,11 @@ Default prefix for old style prefix command is `>>` (Can be changed in `.env` or
 
     1. `docker exec -it <container-name-or-id> /bin/bash`
     2. `gallery-dl oauth:pixiv`
+
+### `/connect_node`
+
+- Connect to a new node from the Lavalink server.
+
+  Use this command if you experience problems with the music player.
+
+  Note: Do not use this command while the bot is playing music!

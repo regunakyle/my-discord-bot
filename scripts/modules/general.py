@@ -1,7 +1,13 @@
-from discord.ext import commands
+import asyncio
+import logging
+import re
+import typing as ty
 from pathlib import Path
+
+import discord
+from discord.ext import commands
+
 from ..utility import Utility as Util
-import re, discord, typing as ty, logging, asyncio, subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +21,7 @@ class General(commands.Cog):
         self,
         ia: discord.Interaction,
     ) -> None:
-        """Because why not?"""
+        """Hello!"""
 
         await ia.response.send_message(
             file=discord.File(Path("./assets/images/hello.jpg"))
@@ -34,56 +40,53 @@ class General(commands.Cog):
     ) -> None:
         """Show the <image_number>th picture (or video) of [pixiv_link]."""
 
-        match = re.compile(r"(www\.pixiv\.net\/(?:en\/)?artworks\/[0-9]+)").search(
+        match = re.compile(r"(www\.pixiv\.net\/(?:en\/)?artworks\/\d+)").search(
             pixiv_link
         )
-        if match is None:
+        if not match:
             await ia.response.send_message("You link is invalid!")
             return
 
-        link = match.group()
+        link = match.group(1)
 
         # Delay response, maximum 15 mins
         await ia.response.defer()
 
-        command = ["gallery-dl", link, "--range", str(image_number), "--ugoira-conv"]
-        # TODO: Use async subprocess
-        result = subprocess.run(command, capture_output=True, text=True)
-        if len(result.stdout) == 0:
-            await ia.followup.send(
-                f"Something went wrong: \n{result.stderr if result.stderr else 'Image not found.'}"
-            )
-        else:
-            link = Path(
-                f'./volume/gallery-dl/{re.compile(r"pixiv.*").search(result.stdout).group()}'
-            )
+        # Both Discord and Gallery-DL use MiB
+        command = f"gallery-dl {link} --range {image_number} --ugoira-conv --filesize-max {Util.getMaxFileSize(ia.guild.premium_subscription_count)}M"
 
-            sizeInBytes = round(link.stat().st_size / 1000 / 1000, 2)
+        proc = await asyncio.create_subprocess_shell(
+            command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
 
-            if (
-                ia.guild.premium_subscription_count < 7 and sizeInBytes >= 8
-            ):  # Server level 1 or below, file size 8MB maximum
+        stdout, stderr = await proc.communicate()
+
+        if proc.returncode != 0:
+            if match := re.compile(
+                r"File size larger than allowed maximum \((\d+) > (\d+)\)"
+            ).search(stderr.decode()):
+                toMebibyte = lambda x: f"{int(x) / 1024 / 1024 :.2f}"
                 await ia.followup.send(
-                    f"The image/video is too big! (8MB maximum supported, your image is {sizeInBytes}MB)"
-                )
-            elif (
-                ia.guild.premium_subscription_count < 14 and sizeInBytes >= 16
-            ):  # Server level 2, file size 50MB maximum
-                await ia.followup.send(
-                    f"The image/video is too big! (16MB maximum supported, your image is {sizeInBytes}MB)",
+                    f"Your image is too big! (Maximum size allowed: {toMebibyte(match.group(2))} MiB, your image is {toMebibyte(match.group(1))} MiB)"
                 )
             else:
-                embed = (
-                    discord.Embed(title="Pixiv Image")
-                    .add_field(
-                        name="Shared by",
-                        value=f"{ia.user.display_name}#{ia.user.discriminator}",
-                        inline=False,
-                    )
-                    .add_field(name="Source", value=pixiv_link, inline=False)
+                await ia.followup.send(f"Something went wrong: \n{stderr.decode()}")
+        else:
+            link = Path(
+                f'./volume/gallery-dl/{re.compile(r"pixiv.*").search(stdout.decode()).group()}'
+            )
+
+            embed = (
+                discord.Embed(title="Pixiv Image")
+                .add_field(
+                    name="Shared by",
+                    value=f"{ia.user.display_name}#{ia.user.discriminator}",
+                    inline=False,
                 )
-                await ia.followup.send(
-                    embed=embed,
-                    file=discord.File(link),
-                )
+                .add_field(name="Source", value=pixiv_link, inline=False)
+            )
+            await ia.followup.send(
+                embed=embed,
+                file=discord.File(link),
+            )
             link.unlink()
