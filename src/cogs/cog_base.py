@@ -4,14 +4,37 @@ import sqlite3
 import typing as ty
 from pathlib import Path
 
-from dotenv import dotenv_values
+import discord
+from discord.ext import commands
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
 
 
-# TODO: Use async SQLite3 library
-class Utility:
-    dotenv = dotenv_values(Path("./.env"))
+class CogBase(commands.Cog):
+    def __init__(
+        self, bot: commands.Bot, sessionmaker: async_sessionmaker[AsyncSession]
+    ):
+        self.bot = bot
+        self.sessionmaker = sessionmaker
+
+    def getMaxFileSize(self, nitroCount: int = 0) -> int:
+        """Return the maximum file size (in MiB) supported by the current guild.
+
+        If MAX_FILE_SIZE in .env is smaller than this size, return MAX_FILE_SIZE instead.
+        """
+
+        # Nitro level and their maximum upload size
+        maxSize = 100
+        if nitroCount < 7:
+            maxSize = 8
+        elif nitroCount < 14:
+            maxSize = 16
+
+        try:
+            return min(maxSize, abs(int(os.getenv("MAX_FILE_SIZE"))))
+        except:
+            return maxSize
 
     def connectDB(self) -> ty.Tuple[sqlite3.Connection, sqlite3.Cursor]:
         """Connect to SQLite3 database, returning the connection and cursor (as a tuple)."""
@@ -27,9 +50,8 @@ class Utility:
         cursor = cnxn.cursor()
         return cnxn, cursor
 
-    @classmethod
     def runSQL(
-        cls, query: str, param: ty.List[ty.Any] | None = None
+        self, query: str, param: ty.List[ty.Any] | None = None
     ) -> ty.List[ty.Dict[str, ty.Any]] | None:
         """Run a SQL query and return the result as list of rows(as dict),
 
@@ -37,7 +59,7 @@ class Utility:
 
         You should only run one SQL statement with each call to this function.
         """
-        cnxn, cursor = cls.connectDB(cls)
+        cnxn, cursor = self.connectDB()
 
         try:
             if param is None:
@@ -56,32 +78,3 @@ class Utility:
             cursor.close()
             cnxn.close()
             raise ValueError(e)
-
-    @classmethod
-    def getEnvVar(cls, paramName: str) -> str | None:
-        """Get the environment variable from .env file.
-
-        If not found in the file (or if .env does not exist), get it from system variables instead.
-        """
-        if paramName in cls.dotenv:
-            return cls.dotenv[paramName]
-        return os.getenv(paramName)
-
-    @classmethod
-    def getMaxFileSize(cls, nitroCount: int = 0) -> int:
-        """Return the maximum file size (in MiB) supported by the current guild.
-
-        If MAX_FILE_SIZE in .env is smaller than this size, return MAX_FILE_SIZE instead.
-        """
-
-        # Nitro level and their maximum upload size
-        maxSize = 100
-        if nitroCount < 7:
-            maxSize = 8
-        elif nitroCount < 14:
-            maxSize = 16
-
-        try:
-            return min(maxSize, abs(int(cls.getEnvVar("MAX_FILE_SIZE"))))
-        except:
-            return maxSize

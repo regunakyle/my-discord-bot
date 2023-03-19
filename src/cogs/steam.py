@@ -8,18 +8,24 @@ import typing as ty
 import discord
 import feedparser
 from discord.ext import commands, tasks
+from sqlalchemy import Engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.orm import Session
 
-from ..utility import Utility as Util
+from .cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
 
-class Steam(commands.Cog):
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
+class Steam(CogBase):
+    def __init__(
+        self, bot: commands.Bot, sessionmaker: async_sessionmaker[AsyncSession]
+    ):
+        super().__init__(bot, sessionmaker)
         self.giveawayTask.start()
 
     @discord.app_commands.command()
+    @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         target_domain="Domain of the game site you wish to blacklist",
         is_remove="Set to True if you want to remove <target_domain> from blacklist",
@@ -33,14 +39,13 @@ class Steam(commands.Cog):
         """Blacklist domains for the find giveaway task."""
         # Delay response, maximum 15 mins
         await ia.response.defer()
-
         if target_domain:
             if is_remove:
-                if Util.runSQL(
+                if self.runSQL(
                     "SELECT 1 FROM SteamBlacklist WHERE Keyword = ?",
                     [target_domain.lower()],
                 ):
-                    Util.runSQL(
+                    self.runSQL(
                         "DELETE FROM SteamBlacklist WHERE Keyword = ?",
                         [target_domain.lower()],
                     )
@@ -53,7 +58,7 @@ class Steam(commands.Cog):
                     )
             else:
                 try:
-                    Util.runSQL(
+                    self.runSQL(
                         "INSERT INTO SteamBlacklist VALUES (?,?,datetime())",
                         [target_domain.lower(), ia.guild.id],
                     )
@@ -66,10 +71,11 @@ class Steam(commands.Cog):
                         "Insert keyword failed: Probably because this keyword already exists in the database.",
                     )
                     return
-        result = Util.runSQL(
+        result = self.runSQL(
             "SELECT rowid,* FROM SteamBlacklist WHERE GuildId = ?",
             [ia.guild.id],
         )
+
         blacklist = f"Keyword blacklist for ***{ia.guild.name}***:\n"
         if result:
             for item in result:
@@ -87,7 +93,7 @@ class Steam(commands.Cog):
         rss = feedparser.parse("https://isthereanydeal.com/rss/specials/us")
         for entry in rss.entries:
             if "giveaway" in entry["title"] and "expired" not in entry["summary"]:
-                # Time in UTC +0
+                # Time in UTC
                 publishTime = time.strftime(
                     r"%Y-%m-%d %H:%M:%S", entry["published_parsed"]
                 )
@@ -97,7 +103,7 @@ class Steam(commands.Cog):
                     else None
                 )
                 try:
-                    Util.runSQL(
+                    self.runSQL(
                         "INSERT INTO SteamGiveawayHistory VALUES (?,?,?,?)",
                         [entry["title"], entry["link"], publishTime, expiryDate],
                     )
@@ -113,13 +119,13 @@ class Steam(commands.Cog):
         logger.info("Check giveaway ended.")
 
     def getNewGiveaway(self, guildId: str) -> tuple | None:
-        channel = Util.runSQL(
+        channel = self.runSQL(
             "SELECT BotChannel FROM GuildInfo WHERE GuildId = ?", [guildId]
         )
         if channel is None or channel[0]["BotChannel"] is None:
             return None
         # TODO: Use regex to filter Domain
-        results = Util.runSQL(
+        results = self.runSQL(
             """
         SELECT
             ltrim(sgh.Title,'[giveaway] ') 'Title',
@@ -138,8 +144,8 @@ class Steam(commands.Cog):
         """,
             [guildId],
         )
-        Util.runSQL("UPDATE GuildInfo SET LastUpdated = Datetime()")
-        blacklist = Util.runSQL(
+        self.runSQL("UPDATE GuildInfo SET LastUpdated = Datetime()")
+        blacklist = self.runSQL(
             "SELECT Keyword FROM SteamBlacklist WHERE guildId = ?", [guildId]
         )
         filteredResults = []

@@ -6,15 +6,22 @@ from pathlib import Path
 import discord
 from discord import app_commands
 from discord.ext import commands
+from sqlalchemy import Engine
+from sqlalchemy.orm import Session
 
-from ..utility import Utility as Util
+from .. import models
+from .cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
 
-class Meta(commands.Cog):
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
+class Meta(CogBase):
+    @commands.command()
+    @commands.guild_only()
+    async def test(self, ctx: commands.Context, test: str):
+        await ctx.send(
+            test.encode("latin-1", "backslashreplace").decode("unicode-escape")
+        )
 
     @commands.command()
     @commands.guild_only()
@@ -125,6 +132,8 @@ class Meta(commands.Cog):
             await ia.response.send_message(embed=discord.Embed.from_dict(embedDict))
 
     @discord.app_commands.command()
+    @discord.app_commands.checks.has_permissions(manage_channels=True)
+    @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         is_unset="Set to True if you want to unmark the subscription channel.",
     )
@@ -133,17 +142,18 @@ class Meta(commands.Cog):
     ) -> None:
         """Mark the current channel as the subscription channel. All notification will be sent here."""
         try:
-            if is_unset:
-                Util.runSQL(
-                    """UPDATE GuildInfo SET BotChannel = null WHERE GuildId = ?""",
-                    [ia.guild.id],
-                )
-            else:
-                Util.runSQL(
-                    "INSERT OR REPLACE INTO GuildInfo VALUES (?,?,?,Datetime())",
-                    [ia.guild.id, ia.guild.name, ia.channel.id],
-                )
-            await ia.response.send_message("Update complete.")
+            async with self.sessionmaker() as session:
+                if is_unset:
+                    self.runSQL(
+                        """UPDATE GuildInfo SET BotChannel = null WHERE GuildId = ?""",
+                        [ia.guild.id],
+                    )
+                else:
+                    self.runSQL(
+                        "INSERT OR REPLACE INTO GuildInfo VALUES (?,?,?,Datetime())",
+                        [ia.guild.id, ia.guild.name, ia.channel.id],
+                    )
+                await ia.response.send_message("Update complete.")
         except Exception as e:
             logger.error(e)
             await ia.response.send_message("Operation failed. Something went wrong.")
@@ -175,3 +185,20 @@ class Meta(commands.Cog):
             await ia.response.send_message(
                 f"File {fileName} not found.",
             )
+
+    @discord.app_commands.command()
+    @discord.app_commands.guild_only()
+    @discord.app_commands.describe(
+        message="",
+    )
+    async def setwelcome(
+        self,
+        ia: discord.Interaction,
+        message: str,
+    ) -> None:
+        """Your message must not contain double quotes."""
+        # Special syntax
+        # Channel: <#ChannelNumber>
+        # User: <@UserID>
+        # Emote: <a:EmoteName:EmoteID>
+        await ia.response.send_message("NOT IMPLEMENTED")

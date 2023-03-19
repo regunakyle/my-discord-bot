@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import typing as ty
 from enum import Enum, auto
 from functools import wraps
@@ -8,8 +9,10 @@ from pathlib import Path
 import discord
 import wavelink
 from discord.ext import commands, tasks
+from sqlalchemy import Engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from ..utility import Utility as Util
+from .cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
@@ -34,17 +37,21 @@ class REASON(Enum):
             return False
 
 
-class Music(commands.Cog):
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
+class Music(CogBase):
+    def __init__(
+        self, bot: commands.Bot, sessionmaker: async_sessionmaker[AsyncSession]
+    ):
+        super().__init__(bot, sessionmaker)
         # Assume there is only one node: use this for node.get_tracks()
         self.node: wavelink.Node | None = None
+        self.reconnectCount = 0
         self.checkNodeConnectionTask.start()
 
     @tasks.loop(seconds=30)
     async def checkNodeConnectionTask(self) -> None:
-        if not self.node:
+        if not self.node and self.reconnectCount < 5:
             await self.create_node()
+            self.reconnectCount += 1
 
     async def isUserBotSameChannel(self, ia: discord.Interaction) -> bool:
         """Return True if the user is in the same channel as the bot."""
@@ -55,7 +62,7 @@ class Music(commands.Cog):
             return True
 
     @staticmethod
-    def checkNodeDecorator(func: ty.Callable) -> ty.Callable:
+    def checkNodeExist(func: ty.Callable) -> ty.Callable:
         """Check for self.node. If it is None, send error message."""
 
         @wraps(func)
@@ -76,12 +83,13 @@ class Music(commands.Cog):
         logger.info("Attempting to connect to a node...")
         await wavelink.NodePool.create_node(
             bot=self.bot,
-            host=Util.getEnvVar("LAVALINK_IP"),
-            port=Util.getEnvVar("LAVALINK_PORT"),
-            password=Util.getEnvVar("LAVALINK_PASSWORD"),
+            host=os.getenv("LAVALINK_IP"),
+            port=os.getenv("LAVALINK_PORT"),
+            password=os.getenv("LAVALINK_PASSWORD"),
         )
 
     @discord.app_commands.command()
+    @discord.app_commands.guild_only()
     async def connect_node(
         self,
         ia: discord.Interaction,
@@ -93,28 +101,27 @@ class Music(commands.Cog):
         # Delay response, maximum 15 mins
         await ia.response.defer()
 
-        oldNode = self.node
-
+        self.node = None
+        self.reconnectCount = 0
         await self.create_node()
 
         # Wait for node update
-        while oldNode.identifier == self.node.identifier:
-            await asyncio.sleep(0.5)
+        while self.node is None and self.reconnectCount < 5:
+            await asyncio.sleep(1)
+            self.reconnectCount += 1
 
         await ia.followup.send(
-            f"Identifier of old node: <{oldNode.identifier}>\nIdentifier of new node: <{self.node.identifier}>"
+            f"Identifier of new node: <{self.node.identifier if self.node else 'FAILED'}>"
         )
 
     @discord.app_commands.command()
+    @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         youtube_url="URL of the Youtube video you want to play.",
     )
-    @checkNodeDecorator
+    @checkNodeExist
     async def play(self, ia: discord.Interaction, youtube_url: str) -> None:
-        """Play a song with the given search query.
-
-        If not connected, connect to our voice channel.
-        """
+        """Play a song with the given search query."""
 
         # User must be in a voice channel
         if not ia.user.voice:
@@ -154,7 +161,16 @@ class Music(commands.Cog):
             await vc.play(await vc.queue.get_wait())
 
     @discord.app_commands.command()
-    @checkNodeDecorator
+    @discord.app_commands.guild_only()
+    @checkNodeExist
+    async def loop(self, ia: discord.Interaction) -> None:
+        """(NOT IMPLEMENTED) Loop the current playing song."""
+
+        await ia.response.send_message("This command is not yet implemented!")
+
+    @discord.app_commands.command()
+    @discord.app_commands.guild_only()
+    @checkNodeExist
     async def queue(self, ia: discord.Interaction) -> None:
         """Show all queued songs. A maximum of 20 songs are displayed."""
         if not ia.guild.voice_client:
@@ -208,7 +224,8 @@ class Music(commands.Cog):
         )
 
     @discord.app_commands.command()
-    @checkNodeDecorator
+    @discord.app_commands.guild_only()
+    @checkNodeExist
     async def pause(self, ia: discord.Interaction) -> None:
         """Pause the music player if it is playing."""
         if not ia.guild.voice_client:
@@ -231,7 +248,8 @@ class Music(commands.Cog):
             await ia.response.send_message("Music player paused!")
 
     @discord.app_commands.command()
-    @checkNodeDecorator
+    @discord.app_commands.guild_only()
+    @checkNodeExist
     async def skip(self, ia: discord.Interaction) -> None:
         """Stop and skip the currently playing song."""
         if not ia.guild.voice_client:
@@ -251,7 +269,8 @@ class Music(commands.Cog):
             await vc.stop()
 
     @discord.app_commands.command()
-    @checkNodeDecorator
+    @discord.app_commands.guild_only()
+    @checkNodeExist
     async def quit(self, ia: discord.Interaction) -> None:
         """Make the bot quit the voice channel. Song queue is also cleared."""
         if not ia.guild.voice_client:

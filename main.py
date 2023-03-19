@@ -1,22 +1,28 @@
+import asyncio
 import logging
+import os
 import sqlite3
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 import discord
+from dotenv import load_dotenv
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from scripts.bot import discordBot
-from scripts.utility import Utility as Util
+from src import models
+from src.bot import discordBot
 
 
-def main() -> None:
+async def main() -> None:
     # Initialization
     Path("./volume/logs").mkdir(parents=True, exist_ok=True)
     Path("./volume/gallery-dl").mkdir(parents=True, exist_ok=True)
 
-    # Time Rotating File Handler
+    # Logger
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    logger.setLevel(int(os.getenv("LOGGER_LEVEL") if os.getenv("LOGGER_LEVEL") else 20))
+    logger.addHandler(logging.StreamHandler())
+    # Time Rotating File Handler
     logHandler = TimedRotatingFileHandler(
         Path("./volume/logs/discord.log"), when="D", backupCount=10, encoding="utf-8"
     )
@@ -27,25 +33,20 @@ def main() -> None:
         )
     )
     logger.addHandler(logHandler)
-    # Stream Handler
-    logger.addHandler(logging.StreamHandler())
 
-    if not Path("./volume/db.sqlite3").is_file():
-        logger.info("Database not found. Creating sqlite database...")
-        # Initialize database
-        # Docker Python image uses Debain (aka old) version of SQLite, so cannot use STRICT keyword
-        # See pysqlite3 (https://github.com/coleifer/pysqlite3)
+    # Load .env and basic sanity checking
+    load_dotenv(dotenv_path="./.env")
+    for env in ["DISCORD_TOKEN", "PREFIX", "DATABASE_CONNECTION_STRING"]:
+        if not os.getenv(env):
+            errMsg = f"{env} is not set in both .env and the OS environment."
+            logger.error(errMsg)
+            raise Exception(errMsg)
 
-        cnxn = sqlite3.connect("./volume/db.sqlite3")
-        cursor = cnxn.cursor()
-        for script in Path("./DB_scripts").rglob("*.sql"):
-            with open(script, "r") as f:
-                cursor.execute(f.read())
-                cnxn.commit()
-        cursor.close()
-        cnxn.close()
-
-    command_prefix = Util.getEnvVar("PREFIX")
+    # Database initialization
+    engine = create_async_engine(os.getenv("DATABASE_CONNECTION_STRING"))
+    async with engine.begin() as conn:
+        await conn.run_sync(models.model_base.ModelBase.metadata.create_all)
+    async_session = async_sessionmaker(engine, expire_on_commit=False)
 
     intents = discord.Intents.default()
     intents.members = True
@@ -55,11 +56,14 @@ def main() -> None:
 
     description = "Discord bot for self use. \nWritten in Python using discord.py."
 
-    bot = discordBot(command_prefix, intents, activity, description)
+    bot = discordBot(os.getenv("PREFIX"), intents, activity, description, async_session)
 
     logger.info("STARTING DISCORD BOT PROCESS...\n")
-    bot.run(Util.getEnvVar("DISCORD_TOKEN"))
+    await bot.start(os.getenv("DISCORD_TOKEN"))
+
+    # TODO: Cleanup DB connections if killed
+    # await engine.dispose()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

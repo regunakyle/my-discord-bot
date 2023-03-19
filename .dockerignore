@@ -139,7 +139,7 @@ cython_debug/
 
 # General
 /.vscode
-/playground.ipynb
+*.ipynb
 /volume
 /unittest
 /.history

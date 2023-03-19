@@ -38,8 +38,9 @@ services:
       LAVALINK_PORT: ${LAVALINK_PORT}
       LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
       MAX_FILE_SIZE: ${MAX_FILE_SIZE}
-      DISABLE_MODULE: ${DISABLE_MODULE}
       PREFIX: ${PREFIX}
+      DATABASE_CONNECTION_STRING: ${DATABASE_CONNECTION_STRING}
+      LOGGER_LEVEL: ${LOGGER_LEVEL}
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
@@ -64,17 +65,16 @@ networks:
 
 1. Notify you when there are free game giveaways
 2. A music player to play Youtube video inside a voice channel
-3. Fun bot commands that might interest you (e.g. Currency convertion, Posting raw Pixiv images)
+3. ChatGPT support
+4. Fun bot commands that might interest you (e.g. Currency convertion, Posting raw Pixiv images)
 
 ## TODO List
 
-- [ ] Dynamic welcome message
-- [ ] Add Spotify support
-- [ ] Music bot commands:
-  - [ ] Loop
-  - [ ] Move
-- [ ] Use an ORM for easier database management
-- [ ] Support for PostgreSQL
+- [ ] Music.play: Add Spotify support
+- [ ] Bot commands:
+  - [ ] Music.loop
+- [ ] Support for other databases
+- [ ] Use alembic to make database migration scripts
 - [ ] Create a dashboard for the bot
 
 ## Notable commands
