@@ -4,7 +4,6 @@ from pathlib import Path
 
 import discord
 from discord.ext import commands
-from sqlalchemy import Engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from .cog_base import CogBase
@@ -27,7 +26,7 @@ class ErrorHandler(CogBase):
         logger.error(e)
         error = {"content": None}
 
-        if isinstance(e, discord.app_commands.MissingRole):
+        if isinstance(e, discord.app_commands.MissingPermissions):
             error["content"] = "You don't have the required permission!"
         elif isinstance(e, discord.app_commands.NoPrivateMessage):
             error["content"] = "This command is only available inside a server!"

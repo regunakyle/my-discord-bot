@@ -4,12 +4,10 @@ import os
 import typing as ty
 from enum import Enum, auto
 from functools import wraps
-from pathlib import Path
 
 import discord
 import wavelink
 from discord.ext import commands, tasks
-from sqlalchemy import Engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from .cog_base import CogBase

@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import sqlite3
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 

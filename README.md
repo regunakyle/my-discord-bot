@@ -73,6 +73,7 @@ networks:
 - [ ] Music.play: Add Spotify support
 - [ ] Bot commands:
   - [ ] Music.loop
+  - [ ] General.forex (Rewrite with aiohttp or httpx)
 - [ ] Support for other databases
 - [ ] Use alembic to make database migration scripts
 - [ ] Create a dashboard for the bot

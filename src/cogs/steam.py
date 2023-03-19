@@ -1,5 +1,3 @@
-import csv
-import io
 import logging
 import re
 import time
@@ -8,9 +6,7 @@ import typing as ty
 import discord
 import feedparser
 from discord.ext import commands, tasks
-from sqlalchemy import Engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from sqlalchemy.orm import Session
 
 from .cog_base import CogBase
 
@@ -23,6 +19,22 @@ class Steam(CogBase):
     ):
         super().__init__(bot, sessionmaker)
         self.giveawayTask.start()
+
+    @discord.app_commands.command()
+    @discord.app_commands.guild_only()
+    @discord.app_commands.describe(
+        is_unsubscibe="Set to True if you want to remove <target_domain> from blacklist",
+    )
+    async def steam_subscribe(
+        self,
+        ia: discord.Interaction,
+        is_unsubscibe: bool = False,
+    ) -> None:
+        """Blacklist domains for the find giveaway task."""
+        # Delay response, maximum 15 mins
+        await ia.response.defer()
+
+        await ia.followup.send("test")
 
     @discord.app_commands.command()
     @discord.app_commands.guild_only()
@@ -86,11 +98,12 @@ class Steam(CogBase):
         await ia.followup.send(blacklist)
 
     # Schedule Job Scripts Start
-    def checkGiveaway(self) -> None:
+    async def checkGiveaway(self) -> None:
         logger.info("Fetching data from isthereanydeal.com...")
         datePattern = re.compile(r"[eE]xpires? on (\d{4}-\d{2}-\d{2})")
-        # TODO: Use an async library to get RSS file, then pass it to feedparser
-        rss = feedparser.parse("https://isthereanydeal.com/rss/specials/us")
+        rss = feedparser.parse(
+            await self.download("https://isthereanydeal.com/rss/specials/us")
+        )
         for entry in rss.entries:
             if "giveaway" in entry["title"] and "expired" not in entry["summary"]:
                 # Time in UTC
@@ -165,7 +178,7 @@ class Steam(CogBase):
 
     @tasks.loop(hours=12)
     async def giveawayTask(self) -> None:
-        self.checkGiveaway()
+        await self.checkGiveaway()
         for guild in self.bot.guilds:
             newList = self.getNewGiveaway(guild.id)
             if newList == None:

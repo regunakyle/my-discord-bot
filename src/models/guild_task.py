@@ -8,14 +8,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 from .model_base import ModelBase
 
 
-class SteamBlacklist(ModelBase):
-    __tablename__ = "steam_blacklist"
+class GuildTask(ModelBase):
+    __tablename__ = "guild_task"
 
     id: Mapped[UUID] = mapped_column(init=False, primary_key=True, default=uuid4)
     guild_id: Mapped[int] = mapped_column(
         ForeignKey("guild_info.guild_id", onupdate="CASCADE", ondelete="CASCADE")
     )
-    keyword: Mapped[str] = mapped_column(String(253))
-    time_added: Mapped[datetime] = mapped_column(
-        insert_default=datetime.utcnow(), default=None
-    )
+    task_name: Mapped[str] = mapped_column(String(100))
+    last_run: Mapped[ty.Optional[datetime]] = mapped_column(default=None)

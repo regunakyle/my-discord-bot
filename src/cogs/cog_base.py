@@ -1,10 +1,10 @@
 import logging
 import os
 import sqlite3
+import tempfile
 import typing as ty
-from pathlib import Path
 
-import discord
+import aiohttp
 from discord.ext import commands
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -78,3 +78,19 @@ class CogBase(commands.Cog):
             cursor.close()
             cnxn.close()
             raise ValueError(e)
+
+    async def download(self, url: str) -> ty.BinaryIO:
+        """Download the content of <url> to <file> and return <file>.
+
+        Note: NOT compatible with discord.File"""
+        # TODO: Fix compatibility with discord.File
+        file = tempfile.TemporaryFile()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                while True:
+                    chunk = await response.content.read(4096)
+                    if not chunk:
+                        break
+                    file.write(chunk)
+        file.seek(0)
+        return file

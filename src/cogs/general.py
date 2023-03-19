@@ -7,10 +7,8 @@ from pathlib import Path
 import discord
 import openai
 import yfinance as yf
-from discord.ext import commands
 from revChatGPT.V1 import AsyncChatbot
 from revChatGPT.V3 import Chatbot
-from sqlalchemy import Engine
 
 from .cog_base import CogBase
 
@@ -119,7 +117,7 @@ class General(CogBase):
         target_currency: str,
     ) -> None:
         """(RATE LIMITED) Convert currency using data from Yahoo Finance."""
-        # TODO: Rewrite the whole thing using aiohttp
+        # TODO: Rewrite the whole thing using aiohttp or httpx, remove yfinance dependency
 
         # Delay response, maximum 15 mins
         await ia.response.defer()
@@ -151,7 +149,7 @@ class General(CogBase):
     @discord.app_commands.guild_only()
     @discord.app_commands.checks.dynamic_cooldown(checkCooldown, key=None)
     @discord.app_commands.describe(
-        content="",
+        content="PLACEHOLDER",
     )
     async def chat(
         self,
@@ -165,7 +163,7 @@ class General(CogBase):
     @discord.app_commands.guild_only()
     @discord.app_commands.checks.dynamic_cooldown(checkCooldown, key=None)
     @discord.app_commands.describe(
-        prompt="",
+        prompt="PLACEHOLDER",
     )
     async def draw(
         self,
@@ -179,9 +177,9 @@ class General(CogBase):
     @discord.app_commands.guild_only()
     @discord.app_commands.checks.dynamic_cooldown(checkCooldown, key=None)
     @discord.app_commands.describe(
-        prompt="",
+        prompt="PLACEHOLDER",
     )
-    async def chatreset(
+    async def reset_chat(
         self,
         ia: discord.Interaction,
         prompt: str,
