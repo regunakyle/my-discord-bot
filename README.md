@@ -40,6 +40,7 @@ services:
       MAX_FILE_SIZE: ${MAX_FILE_SIZE}
       PREFIX: ${PREFIX}
       DATABASE_CONNECTION_STRING: ${DATABASE_CONNECTION_STRING}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       LOGGER_LEVEL: ${LOGGER_LEVEL}
     volumes:
       - dbot-vol:/app/volume

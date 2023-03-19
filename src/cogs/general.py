@@ -64,7 +64,7 @@ class General(CogBase):
         await ia.response.defer()
 
         # Both Discord and Gallery-DL use MiB
-        command = f"gallery-dl {link} --range {image_number} --ugoira-conv --filesize-max {self.getMaxFileSize(ia.guild.premium_subscription_count)}M"
+        command = f"gallery-dl {link} --range {int(image_number)} --ugoira-conv --filesize-max {self.getMaxFileSize(ia.guild.premium_subscription_count)}M"
 
         proc = await asyncio.create_subprocess_shell(
             command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE

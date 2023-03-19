@@ -42,7 +42,7 @@ async def main() -> None:
             raise Exception(errMsg)
 
     # Database initialization
-    engine = create_async_engine(os.getenv("DATABASE_CONNECTION_STRING"))
+    engine = create_async_engine(os.getenv("DATABASE_CONNECTION_STRING"), echo=True)
     async with engine.begin() as conn:
         await conn.run_sync(models.model_base.ModelBase.metadata.create_all)
     async_session = async_sessionmaker(engine, expire_on_commit=False)

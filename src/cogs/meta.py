@@ -5,7 +5,7 @@ from pathlib import Path
 
 import discord
 from discord.ext import commands
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 
 from .. import models
 from .cog_base import CogBase
@@ -127,29 +127,35 @@ class Meta(CogBase):
     @discord.app_commands.command()
     @discord.app_commands.checks.has_permissions(manage_channels=True)
     @discord.app_commands.guild_only()
-    @discord.app_commands.describe(
-        is_unset="Set to True if you want to unmark the subscription channel.",
-    )
-    async def set_bot_channel(
-        self, ia: discord.Interaction, is_unset: bool = False
-    ) -> None:
-        """Mark the current channel as the subscription channel. All notification will be sent here."""
-        try:
-            async with self.sessionmaker() as session:
-                if is_unset:
-                    self.runSQL(
-                        """UPDATE GuildInfo SET BotChannel = null WHERE GuildId = ?""",
-                        [ia.guild.id],
+    async def set_bot_channel(self, ia: discord.Interaction) -> None:
+        """Mark (or unmark) the current channel as the subscription channel."""
+        resp = "Bot channel unset."
+        async with self.sessionmaker() as session:
+            if (
+                await session.execute(
+                    update(models.GuildInfo)
+                    .where(models.GuildInfo.guild_id == ia.guild.id)
+                    .where(models.GuildInfo.bot_channel == ia.channel.id)
+                    .values(bot_channel=None)
+                )
+            ).rowcount == 0:
+                if (
+                    await session.execute(
+                        update(models.GuildInfo)
+                        .where(models.GuildInfo.guild_id == ia.guild.id)
+                        .values(bot_channel=ia.channel.id)
                     )
-                else:
-                    self.runSQL(
-                        "INSERT OR REPLACE INTO GuildInfo VALUES (?,?,?,Datetime())",
-                        [ia.guild.id, ia.guild.name, ia.channel.id],
+                ).rowcount == 0:
+                    session.add(
+                        models.GuildInfo(
+                            guild_id=ia.guild.id,
+                            guild_name=ia.guild.name,
+                            bot_channel=ia.channel.id,
+                        )
                     )
-                await ia.response.send_message("Update complete.")
-        except Exception as e:
-            logger.error(e)
-            await ia.response.send_message("Operation failed. Something went wrong.")
+                resp = f"Bot channel set to <#{ia.channel.id}>."
+            await session.commit()
+        await ia.response.send_message(resp)
 
     @discord.app_commands.command()
     @discord.app_commands.describe(
@@ -182,11 +188,13 @@ class Meta(CogBase):
     @discord.app_commands.command()
     @discord.app_commands.guild_only()
     @discord.app_commands.checks.has_permissions(manage_channels=True)
-    @discord.app_commands.describe(message="PLACEHOLDER")
+    @discord.app_commands.describe(
+        message="NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>"
+    )
     async def set_welcome_message(
         self, ia: discord.Interaction, message: str = ""
     ) -> None:
-        """Your message must not contain double quotes."""
+        """Set welcome message send to newcomers of this server. Unset if no message inputted."""
         # Special syntax
         # Channel: <#ChannelNumber>
         # User: <@UserID>
@@ -211,17 +219,11 @@ class Meta(CogBase):
                 )
                 if (
                     await session.execute(
-                        select(models.GuildInfo).where(
-                            models.GuildInfo.guild_id == ia.guild.id
-                        )
-                    )
-                ).first():
-                    await session.execute(
                         update(models.GuildInfo)
                         .where(models.GuildInfo.guild_id == ia.guild.id)
                         .values(welcome_message=unescaped_msg)
                     )
-                else:
+                ).rowcount == 0:
                     session.add(
                         models.GuildInfo(
                             guild_id=ia.guild.id,
@@ -229,6 +231,8 @@ class Meta(CogBase):
                             welcome_message=unescaped_msg,
                         )
                     )
-                resp = "Welcome message set."
+                resp = (
+                    f"Welcome message set. Example:\n<@{ia.user.id}>\n{unescaped_msg}"
+                )
             await session.commit()
         await ia.response.send_message(resp)

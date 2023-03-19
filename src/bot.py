@@ -53,4 +53,8 @@ class discordBot(commands.Bot):
                 return
 
         if channel is not None and guild[0].welcome_message:
-            await channel.send(f"<@{member.id}>\n{guild[0].welcome_message}")
+            try:
+                await channel.send(f"<@{member.id}>\n{guild[0].welcome_message}")
+            except Exception as e:
+                # TODO: Delete the welcome message if the message is malformed
+                logger.error(e)
