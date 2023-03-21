@@ -82,7 +82,7 @@ class CogBase(commands.Cog):
     async def download(self, url: str) -> ty.BinaryIO:
         """Download the content of <url> to <file> and return <file>.
 
-        Note: NOT compatible with discord.File"""
+        Note: NOT compatible with discord.File."""
         # TODO: Fix compatibility with discord.File
         file = tempfile.TemporaryFile()
         async with aiohttp.ClientSession() as session:

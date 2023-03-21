@@ -21,6 +21,7 @@ class GuildTask(ModelBase):
 
     # Relationships
     guild_info: Mapped["GuildInfo"] = relationship(
+        back_populates="guild_tasks",
         init=False,
         lazy="raise",
     )

@@ -23,6 +23,7 @@ class SteamBlacklist(ModelBase):
 
     # Relationships
     guild_info: Mapped["GuildInfo"] = relationship(
+        back_populates="steam_blacklists",
         init=False,
         lazy="raise",
     )
