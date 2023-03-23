@@ -42,19 +42,19 @@ class discordBot(commands.Bot):
     async def on_member_join(self, member: discord.member) -> None:
         channel = member.guild.system_channel
         async with self.sessionmaker() as session:
-            guild = (
+            guild: models.GuildInfo | None = (
                 await session.execute(
                     select(models.GuildInfo).where(
                         models.GuildInfo.guild_id == member.guild.id
                     )
                 )
-            ).first()
+            ).scalar()
             if not guild:
                 return
 
-        if channel is not None and guild[0].welcome_message:
+        if channel is not None and guild.welcome_message:
             try:
-                await channel.send(f"<@{member.id}>\n{guild[0].welcome_message}")
+                await channel.send(f"<@{member.id}>\n{guild.welcome_message}")
             except Exception as e:
                 # TODO: Delete the welcome message if the message is malformed
                 logger.error(e)

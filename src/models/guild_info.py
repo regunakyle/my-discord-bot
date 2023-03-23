@@ -25,8 +25,3 @@ class GuildInfo(ModelBase):
         init=False,
         lazy="raise",
     )
-    steam_blacklists: Mapped[ty.List["SteamBlacklist"]] = relationship(
-        back_populates="guild_info",
-        init=False,
-        lazy="raise",
-    )

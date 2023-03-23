@@ -17,7 +17,9 @@ class GuildTask(ModelBase):
         ForeignKey("guild_info.guild_id", onupdate="CASCADE", ondelete="CASCADE")
     )
     task_name: Mapped[str] = mapped_column(String(100))
-    last_run: Mapped[ty.Optional[datetime]] = mapped_column(default=None)
+    last_run: Mapped[datetime] = mapped_column(
+        insert_default=datetime.utcnow(), default=None
+    )
 
     # Relationships
     guild_info: Mapped["GuildInfo"] = relationship(
