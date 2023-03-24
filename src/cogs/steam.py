@@ -122,7 +122,7 @@ class Steam(CogBase):
                                 title=entry["title"],
                                 link=entry["link"],
                                 publish_time=publish_time,
-                                expiry_time=(
+                                expiry_date=(
                                     dt.datetime.strptime(
                                         datePattern.search(entry["summary"]).group(1),
                                         r"%Y-%m-%d",
@@ -137,26 +137,28 @@ class Steam(CogBase):
                         pass
         logger.info("Check giveaway ended.")
 
-    async def getNewGiveaway(
+    async def getGuildGiveaway(
         self, guildId: str
     ) -> ty.List[models.SteamGiveawayHistory]:
         result = []
         async with self.sessionmaker() as session:
-            giveaways: ty.List[models.SteamGiveawayHistory] = await session.execute(
-                select(models.SteamGiveawayHistory)
-                .join(
-                    models.GuildTask,
-                    models.SteamGiveawayHistory.publish_time
-                    > models.GuildTask.last_run,
+            giveaways: ty.List[models.SteamGiveawayHistory] = (
+                await session.execute(
+                    select(models.SteamGiveawayHistory)
+                    .join(
+                        models.GuildTask,
+                        models.SteamGiveawayHistory.publish_time
+                        > models.GuildTask.last_run,
+                    )
+                    .where(models.GuildTask.guild_id == guildId)
                 )
-                .where(models.GuildTask.guild_id == guildId)
             ).scalars()
 
             blacklists: ty.List[str] = [
                 blacklist
                 for blacklist in (
-                    await session.execute(
-                        select(models.SteamBlacklist.keyword)
+                    (
+                        await session.execute(select(models.SteamBlacklist.keyword))
                     ).scalars()
                 )
             ]
@@ -197,7 +199,7 @@ class Steam(CogBase):
                 )
             ).scalars()
         for guild_task in guild_tasks:
-            newGiveaways = await self.getNewGiveaway(guild_task.guild_info.guild_id)
+            newGiveaways = await self.getGuildGiveaway(guild_task.guild_info.guild_id)
 
             if not (
                 botChannel := self.bot.get_channel(guild_task.guild_info.bot_channel)
@@ -217,7 +219,7 @@ class Steam(CogBase):
                     )
                     .add_field(
                         name="Expiry date",
-                        value=item.expiry_time if item.expiry_time else "Unknown",
+                        value=item.expiry_date if item.expiry_date else "Unknown",
                         inline=False,
                     )
                 )

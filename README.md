@@ -66,8 +66,7 @@ networks:
 
 1. Notify you when there are free game giveaways
 2. A music player to play Youtube video inside a voice channel
-3. ChatGPT support
-4. Fun bot commands that might interest you (e.g. Currency convertion, Posting raw Pixiv images)
+3. Fun bot commands that might interest you (e.g. Currency convertion, Posting raw Pixiv images)
 
 ## TODO List
 
@@ -75,7 +74,10 @@ networks:
 - [ ] Bot commands:
   - [ ] Music.loop
   - [ ] General.forex (Rewrite with aiohttp or httpx)
-- [ ] Support for other databases
+  - [ ] General.chat
+  - [ ] General.draw
+  - [ ] General.reset_chat
+- [ ] Support for other MySQL/MariaDB and PostgreSQL
 - [ ] Use alembic to make database migration scripts
 - [ ] Create a dashboard for the bot
 
