@@ -1,5 +1,5 @@
+import datetime as dt
 import typing as ty
-from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, String
@@ -17,8 +17,8 @@ class GuildTask(ModelBase):
         ForeignKey("guild_info.guild_id", onupdate="CASCADE", ondelete="CASCADE")
     )
     task_name: Mapped[str] = mapped_column(String(100))
-    last_run: Mapped[datetime] = mapped_column(
-        insert_default=datetime.utcnow(), default=None
+    last_run: Mapped[dt.datetime] = mapped_column(
+        insert_default=dt.datetime.utcnow(), default=None
     )
 
     # Relationships

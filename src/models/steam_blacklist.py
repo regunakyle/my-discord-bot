@@ -1,5 +1,5 @@
+import datetime as dt
 import typing as ty
-from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, String
@@ -16,6 +16,6 @@ class SteamBlacklist(ModelBase):
         ForeignKey("guild_info.guild_id", onupdate="CASCADE", ondelete="CASCADE")
     )
     keyword: Mapped[str] = mapped_column(String(253))
-    time_added: Mapped[datetime] = mapped_column(
-        insert_default=datetime.utcnow(), default=None
+    time_added: Mapped[dt.datetime] = mapped_column(
+        insert_default=dt.datetime.utcnow(), default=None
     )

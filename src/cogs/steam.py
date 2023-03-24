@@ -3,11 +3,12 @@ import logging
 import re
 import typing as ty
 from time import mktime
+from urllib.parse import urlparse
 
 import discord
 import feedparser
 from discord.ext import commands, tasks
-from sqlalchemy import delete, insert, select
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
@@ -92,11 +93,10 @@ class Steam(CogBase):
                 )
             ).scalars()
 
-        resp = f"Keyword blacklist for ***{ia.guild.name}***:\n"
+        resp = f"Keyword blacklist for ***{ia.guild.name}***:"
         if blacklists:
             for index, blacklist in enumerate(blacklists, start=1):
-                resp += f"{index}: ***{blacklist.keyword}***\n"
-            resp = blacklist[:-1]
+                resp += f"\n{index}: ***{blacklist.keyword}***"
         else:
             resp += "Empty. Maybe you should add something here?"
         await ia.followup.send(resp)
@@ -109,7 +109,6 @@ class Steam(CogBase):
             await self.download("https://isthereanydeal.com/rss/specials/us")
         )
 
-        giveaway_records = []
         for entry in rss.entries:
             if "giveaway" in entry["title"] and "expired" not in entry["summary"]:
                 # Time in UTC
@@ -141,49 +140,52 @@ class Steam(CogBase):
     async def getNewGiveaway(
         self, guildId: str
     ) -> ty.List[models.SteamGiveawayHistory]:
-        # TODO: Use regex to filter Domain
-        return []
-        results = self.runSQL(
-            """
-        SELECT
-            ltrim(sgh.Title,'[giveaway] ') 'Title',
-            sgh.Link,
-            sgh.PublishTime,
-            sgh.ExpiryDate,
-            substr(sgh.Link,instr(sgh.Link,'://')+ 3,instr(sgh.Link,'com/')-instr(sgh.Link,'://')) 'Domain'
-        FROM
-            SteamGiveawayHistory sgh
-        INNER JOIN GuildInfo gi 
-                ON
-            gi.GuildId = ?
-            AND sgh.PublishTime > gi.LastUpdated
-        ORDER BY
-            PublishTime DESC
-        """,
-            [guildId],
-        )
-        self.runSQL("UPDATE GuildInfo SET LastUpdated = Datetime()")
-        blacklist = self.runSQL(
-            "SELECT Keyword FROM SteamBlacklist WHERE guildId = ?", [guildId]
-        )
-        filteredResults = []
-        if results:
-            for result in results:
-                inBlacklist = False
-                if blacklist:
-                    for item in blacklist:
-                        if item["Keyword"] in result["Domain"]:
-                            inBlacklist = True
-                            break
-                if inBlacklist == False:
-                    filteredResults.append(result)
-        else:
-            filteredResults = None
-        return filteredResults
+        result = []
+        async with self.sessionmaker() as session:
+            giveaways: ty.List[models.SteamGiveawayHistory] = await session.execute(
+                select(models.SteamGiveawayHistory)
+                .join(
+                    models.GuildTask,
+                    models.SteamGiveawayHistory.publish_time
+                    > models.GuildTask.last_run,
+                )
+                .where(models.GuildTask.guild_id == guildId)
+            ).scalars()
+
+            blacklists: ty.List[str] = [
+                blacklist
+                for blacklist in (
+                    await session.execute(
+                        select(models.SteamBlacklist.keyword)
+                    ).scalars()
+                )
+            ]
+
+            # Check if the domain contain blacklisted keywords
+            for giveaway in giveaways:
+                if not any(
+                    blacklist in urlparse(giveaway.link).netloc
+                    for blacklist in blacklists
+                ):
+                    result.append(giveaway)
+
+            # Update last_run time for this guild
+            await session.execute(
+                update(models.GuildTask)
+                .where(models.GuildTask.task_name == self.taskName)
+                .where(models.GuildTask.guild_id == guildId)
+                .values(last_run=dt.datetime.utcnow())
+            )
+
+            await session.commit()
+
+        return result
 
     @tasks.loop(hours=12)
     async def giveawayTask(self) -> None:
+        # Get new giveaways
         await self.checkGiveaway()
+
         async with self.sessionmaker() as session:
             guild_tasks: ty.List[models.GuildTask] = (
                 await session.execute(
@@ -208,14 +210,15 @@ class Steam(CogBase):
             for item in newGiveaways:
                 icon = discord.File("./assets/images/steam.png", filename="steam.png")
                 embed = (
-                    discord.Embed(title=item["Title"], url=item["Link"])
+                    discord.Embed(title=item.title, url=item.link)
                     .set_thumbnail(url="attachment://steam.png")
                     .add_field(
-                        name="Publish date", value=item["PublishTime"], inline=False
+                        name="Publish date", value=item.publish_time, inline=False
+                    )
+                    .add_field(
+                        name="Expiry date",
+                        value=item.expiry_time if item.expiry_time else "Unknown",
+                        inline=False,
                     )
                 )
-                if item["ExpiryDate"]:
-                    embed.add_field(
-                        name="Expiry date", value=item["ExpiryDate"], inline=False
-                    )
                 await botChannel.send(file=icon, embed=embed)

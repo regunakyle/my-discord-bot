@@ -1,5 +1,5 @@
+import datetime as dt
 import typing as ty
-from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, String
@@ -14,5 +14,7 @@ class SteamGiveawayHistory(ModelBase):
     id: Mapped[UUID] = mapped_column(init=False, primary_key=True, default=uuid4)
     title: Mapped[str] = mapped_column(String(100))
     link: Mapped[str] = mapped_column(String(300))
-    publish_time: Mapped[datetime]
-    expiry_time: Mapped[ty.Optional[datetime]] = mapped_column(DateTime, default=None)
+    publish_time: Mapped[dt.datetime]
+    expiry_time: Mapped[ty.Optional[dt.datetime]] = mapped_column(
+        DateTime, default=None
+    )
