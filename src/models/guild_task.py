@@ -3,6 +3,7 @@ import typing as ty
 from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, String
+from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .model_base import ModelBase
@@ -23,7 +24,9 @@ class GuildTask(ModelBase):
 
     # Relationships
     guild_info: Mapped["GuildInfo"] = relationship(
-        back_populates="guild_tasks",
         init=False,
         lazy="raise",
+    )
+    bot_channel: AssociationProxy[int] = association_proxy(
+        "guild_info", "bot_channel", init=False
     )

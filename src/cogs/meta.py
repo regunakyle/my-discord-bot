@@ -128,7 +128,7 @@ class Meta(CogBase):
     @discord.app_commands.checks.has_permissions(manage_channels=True)
     @discord.app_commands.guild_only()
     async def set_bot_channel(self, ia: discord.Interaction) -> None:
-        """Mark (or unmark) the current channel as the subscription channel."""
+        """(ADMIN) Mark (or unmark) the current channel as the subscription channel."""
         resp = "Bot channel unset."
         async with self.sessionmaker() as session:
             if (
@@ -162,7 +162,7 @@ class Meta(CogBase):
         number_of_days="Number of days from today",
     )
     async def get_log(self, ia: discord.Interaction, number_of_days: int = 0) -> None:
-        """Get log file. Only the owner of the bot can use this."""
+        """(OWNER ONLY) Get log file."""
         if not await self.bot.is_owner(ia.user):
             await ia.response.send_message("Only the bot owner may use this command!")
             return
@@ -189,7 +189,7 @@ class Meta(CogBase):
     @discord.app_commands.guild_only()
     @discord.app_commands.checks.has_permissions(manage_channels=True)
     @discord.app_commands.describe(
-        message="NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>"
+        message="(ADMIN) NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>"
     )
     async def set_welcome_message(
         self, ia: discord.Interaction, message: str = ""

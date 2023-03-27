@@ -34,14 +34,18 @@ services:
     image: regunakyle/discordbot
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DATABASE_CONNECTION_STRING: ${DATABASE_CONNECTION_STRING}
+      LOGGER_LEVEL: ${LOGGER_LEVEL}
+      # Used by old style prefix commands; this bot only has the <PREFIX>sync prefix command
+      PREFIX: ${PREFIX}
+      # Maximum file upload size, used by command like /pixiv
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      # Lavalink parameters, used by the Music module
       LAVALINK_IP: ${LAVALINK_IP}
       LAVALINK_PORT: ${LAVALINK_PORT}
       LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
-      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
-      PREFIX: ${PREFIX}
-      DATABASE_CONNECTION_STRING: ${DATABASE_CONNECTION_STRING}
+      # OpenAI key for ChatGPT usage
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      LOGGER_LEVEL: ${LOGGER_LEVEL}
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
@@ -66,7 +70,7 @@ networks:
 
 1. Notify you when there are free game giveaways
 2. A music player to play Youtube video inside a voice channel
-3. Fun bot commands that might interest you (e.g. Currency convertion, Posting raw Pixiv images)
+3. Fun bot commands that might interest you
 
 ## TODO List
 

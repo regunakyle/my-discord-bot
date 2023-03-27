@@ -33,7 +33,7 @@ class Steam(CogBase):
         self,
         ia: discord.Interaction,
     ) -> None:
-        """Subscribe to Steam giveaway notification, or unsubscribe if this server already subscribed."""
+        """(ADMIN) Subscribe (or unsubscribe) to Steam giveaway notification."""
         resp = "Unsubscribed to steam giveaway notification."
         async with self.sessionmaker() as session:
             if (
@@ -43,10 +43,26 @@ class Steam(CogBase):
                     .where(models.GuildTask.task_name == self.taskName)
                 )
             ).rowcount == 0:
+                if not (
+                    await session.execute(
+                        select(models.GuildInfo).where(
+                            models.GuildInfo.guild_id == ia.guild.id
+                        )
+                    )
+                ).scalar():
+                    session.add(
+                        models.GuildInfo(
+                            guild_id=ia.guild.id,
+                            guild_name=ia.guild.name,
+                        )
+                    )
                 session.add(
-                    models.GuildTask(guild_id=ia.guild.id, task_name=self.taskName)
+                    models.GuildTask(
+                        guild_id=ia.guild.id,
+                        task_name=self.taskName,
+                    )
                 )
-                resp = "Subscribed to steam giveaway notification."
+                resp = "Subscribed to steam giveaway notification. Make sure you have set a bot channel via /set-bot-channel."
             await session.commit()
         await ia.response.send_message(resp)
 
@@ -102,13 +118,14 @@ class Steam(CogBase):
         await ia.followup.send(resp)
 
     # Schedule Job Scripts Start
-    async def checkGiveaway(self) -> None:
+    async def getNewGiveaways(self) -> None:
         logger.info("Fetching data from isthereanydeal.com...")
         datePattern = re.compile(r"[eE]xpires? on (\d{4}-\d{2}-\d{2})")
         rss = feedparser.parse(
             await self.download("https://isthereanydeal.com/rss/specials/us")
         )
 
+        # TODO: Suppress log when inserting records
         for entry in rss.entries:
             if "giveaway" in entry["title"] and "expired" not in entry["summary"]:
                 # Time in UTC
@@ -137,7 +154,7 @@ class Steam(CogBase):
                         pass
         logger.info("Check giveaway ended.")
 
-    async def getGuildGiveaway(
+    async def filterGuildGiveaway(
         self, guildId: str
     ) -> ty.List[models.SteamGiveawayHistory]:
         result = []
@@ -186,7 +203,7 @@ class Steam(CogBase):
     @tasks.loop(hours=12)
     async def giveawayTask(self) -> None:
         # Get new giveaways
-        await self.checkGiveaway()
+        await self.getNewGiveaways()
 
         async with self.sessionmaker() as session:
             guild_tasks: ty.List[models.GuildTask] = (
@@ -199,11 +216,9 @@ class Steam(CogBase):
                 )
             ).scalars()
         for guild_task in guild_tasks:
-            newGiveaways = await self.getGuildGiveaway(guild_task.guild_info.guild_id)
+            newGiveaways = await self.filterGuildGiveaway(guild_task.guild_id)
 
-            if not (
-                botChannel := self.bot.get_channel(guild_task.guild_info.bot_channel)
-            ):
+            if not (botChannel := self.bot.get_channel(guild_task.bot_channel)):
                 logger.warning(
                     f"This guild (id: {guild_task.id}, name: {guild_task.guild_info.guild_name}) has not yet set a bot channel!"
                 )

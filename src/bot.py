@@ -5,7 +5,7 @@ from inspect import getmembers, isclass
 
 import discord
 from discord.ext import commands
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from . import cogs, models
@@ -38,6 +38,15 @@ class discordBot(commands.Bot):
         # Add all cogs
         for module in getmembers(cogs, isclass):
             await self.add_cog(module[1](self, self.sessionmaker))
+
+        async with self.sessionmaker() as session:
+            # Delete removed guilds
+            await session.execute(
+                delete(models.GuildInfo).where(
+                    ~models.GuildInfo.guild_id.in_([guild.id for guild in self.guilds])
+                )
+            )
+            await session.commit()
 
     async def on_member_join(self, member: discord.member) -> None:
         channel = member.guild.system_channel

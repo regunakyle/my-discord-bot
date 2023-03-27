@@ -6,6 +6,7 @@ from pathlib import Path
 
 import discord
 from dotenv import load_dotenv
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from src import models
@@ -19,7 +20,7 @@ async def main() -> None:
 
     # Logger
     logger = logging.getLogger()
-    logger.setLevel(int(os.getenv("LOGGER_LEVEL") if os.getenv("LOGGER_LEVEL") else 20))
+    logger.setLevel(os.getenv("LOGGER_LEVEL") if os.getenv("LOGGER_LEVEL") else "INFO")
     logger.addHandler(logging.StreamHandler())
     # Time Rotating File Handler
     logHandler = TimedRotatingFileHandler(
@@ -43,6 +44,15 @@ async def main() -> None:
 
     # Database initialization
     engine = create_async_engine(os.getenv("DATABASE_CONNECTION_STRING"), echo=True)
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        """If using SQLite, enable foreign key constraints."""
+        if os.getenv("DATABASE_CONNECTION_STRING").startswith(r"sqlite+aiosqlite://"):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+
     async with engine.begin() as conn:
         await conn.run_sync(models.model_base.ModelBase.metadata.create_all)
     async_session = async_sessionmaker(engine, expire_on_commit=False)

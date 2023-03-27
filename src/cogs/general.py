@@ -4,9 +4,9 @@ import re
 import typing as ty
 from pathlib import Path
 
+import aiohttp
 import discord
 import openai
-import yfinance as yf
 from revChatGPT.V1 import AsyncChatbot
 from revChatGPT.V3 import Chatbot
 
@@ -15,17 +15,18 @@ from .cog_base import CogBase
 logger = logging.getLogger(__name__)
 
 
-class General(CogBase):
-    # TODO: Find a way to put this function in CogBase while being
-    # compatible with the dynamic_cooldown decorator
-    def checkCooldown(
-        ia: discord.Interaction,
-    ) -> discord.app_commands.Cooldown | None:
-        """Global cooldown for commands, maximum 1 use per 10 seconds (unlimited for the bot owner)"""
-        if ia.user.id == ia.client.application.owner.id:
-            return None
-        return discord.app_commands.Cooldown(1, 5.0)
+# TODO: Find a way to put this function in CogBase while being
+# compatible with the dynamic_cooldown decorator
+def checkCooldown(
+    ia: discord.Interaction,
+) -> discord.app_commands.Cooldown | None:
+    """Global cooldown for commands, maximum 1 use per 5 seconds (unlimited for the bot owner)"""
+    if ia.user.id == ia.client.application.owner.id:
+        return None
+    return discord.app_commands.Cooldown(1, 5.0)
 
+
+class General(CogBase):
     @discord.app_commands.command()
     async def hello(
         self,
@@ -128,12 +129,25 @@ class General(CogBase):
             else f"{target_currency}=X"
         )
         try:
-            assert 0 <= float(amount) < 1e10
+            assert 0 < amount < 1e10
+
+            amount = round(amount, 2)
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    url=f"https://query2.finance.yahoo.com/v8/finance/chart/{forex}",
+                    params={"range": "1d", "interval": "1d"},
+                    timeout=10,
+                ) as response:
+                    quote = await response.json()
+            # Funny response format
             newAmt = round(
-                yf.Ticker(forex).history("1d").iloc[0]["Close"] * float(amount), 2
+                quote["chart"]["result"][0]["indicators"]["quote"][0]["close"][0]
+                * amount,
+                2,
             )
             await ia.followup.send(
-                f"{amount} {starting_currency} = {str(newAmt)} {target_currency}",
+                f"{amount} {starting_currency.upper()} = {newAmt} {target_currency.upper()}",
             )
         except AssertionError as e:
             await ia.followup.send(
@@ -156,8 +170,8 @@ class General(CogBase):
         ia: discord.Interaction,
         content: str,
     ) -> None:
-        """(RATE LIMITED GLOBALLY)"""
-        await ia.response.send_message("NOT IMPLEMENTED")
+        """(NOT IMPLEMENTED/RATE LIMITED GLOBALLY)"""
+        await ia.response.send_message("This command is not yet implemented!")
 
     @discord.app_commands.command()
     @discord.app_commands.guild_only()
@@ -170,8 +184,8 @@ class General(CogBase):
         ia: discord.Interaction,
         prompt: str,
     ) -> None:
-        """(RATE LIMITED GLOBALLY)"""
-        await ia.response.send_message("NOT IMPLEMENTED")
+        """(NOT IMPLEMENTED/RATE LIMITED GLOBALLY)"""
+        await ia.response.send_message("This command is not yet implemented!")
 
     @discord.app_commands.command()
     @discord.app_commands.guild_only()
@@ -184,5 +198,5 @@ class General(CogBase):
         ia: discord.Interaction,
         prompt: str,
     ) -> None:
-        """(RATE LIMITED GLOBALLY)"""
-        await ia.response.send_message("NOT IMPLEMENTED")
+        """(NOT IMPLEMENTED/RATE LIMITED GLOBALLY)"""
+        await ia.response.send_message("This command is not yet implemented!")
