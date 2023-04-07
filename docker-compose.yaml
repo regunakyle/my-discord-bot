@@ -16,8 +16,6 @@ services:
       LAVALINK_IP: ${LAVALINK_IP}
       LAVALINK_PORT: ${LAVALINK_PORT}
       LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
-      # OpenAI key for ChatGPT usage
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped

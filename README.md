@@ -44,8 +44,6 @@ services:
       LAVALINK_IP: ${LAVALINK_IP}
       LAVALINK_PORT: ${LAVALINK_PORT}
       LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
-      # OpenAI key for ChatGPT usage
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
@@ -74,14 +72,10 @@ networks:
 
 ## TODO List
 
-- [ ] Music.play: Add Spotify support
 - [ ] Bot commands:
   - [ ] Music.loop
-  - [ ] General.forex (Rewrite with aiohttp or httpx)
-  - [ ] General.chat
-  - [ ] General.draw
-  - [ ] General.reset_chat
-- [ ] Support for other MySQL/MariaDB and PostgreSQL
+  - [ ] Music.play: Add Spotify support
+- [ ] Support for MySQL/MariaDB and PostgreSQL
 - [ ] Use alembic to make database migration scripts
 - [ ] Create a dashboard for the bot
 

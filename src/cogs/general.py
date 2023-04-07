@@ -6,9 +6,6 @@ from pathlib import Path
 
 import aiohttp
 import discord
-import openai
-from revChatGPT.V1 import AsyncChatbot
-from revChatGPT.V3 import Chatbot
 
 from .cog_base import CogBase
 
@@ -118,8 +115,6 @@ class General(CogBase):
         target_currency: str,
     ) -> None:
         """(RATE LIMITED) Convert currency using data from Yahoo Finance."""
-        # TODO: Rewrite the whole thing using aiohttp or httpx, remove yfinance dependency
-
         # Delay response, maximum 15 mins
         await ia.response.defer()
 
@@ -158,45 +153,3 @@ class General(CogBase):
             await ia.followup.send(
                 "Something went wrong. Most likely you inputted nonexistent currency code(s).",
             )
-
-    @discord.app_commands.command()
-    @discord.app_commands.guild_only()
-    @discord.app_commands.checks.dynamic_cooldown(checkCooldown, key=None)
-    @discord.app_commands.describe(
-        content="PLACEHOLDER",
-    )
-    async def chat(
-        self,
-        ia: discord.Interaction,
-        content: str,
-    ) -> None:
-        """(NOT IMPLEMENTED/RATE LIMITED GLOBALLY)"""
-        await ia.response.send_message("This command is not yet implemented!")
-
-    @discord.app_commands.command()
-    @discord.app_commands.guild_only()
-    @discord.app_commands.checks.dynamic_cooldown(checkCooldown, key=None)
-    @discord.app_commands.describe(
-        prompt="PLACEHOLDER",
-    )
-    async def draw(
-        self,
-        ia: discord.Interaction,
-        prompt: str,
-    ) -> None:
-        """(NOT IMPLEMENTED/RATE LIMITED GLOBALLY)"""
-        await ia.response.send_message("This command is not yet implemented!")
-
-    @discord.app_commands.command()
-    @discord.app_commands.guild_only()
-    @discord.app_commands.checks.dynamic_cooldown(checkCooldown, key=None)
-    @discord.app_commands.describe(
-        prompt="PLACEHOLDER",
-    )
-    async def reset_chat(
-        self,
-        ia: discord.Interaction,
-        prompt: str,
-    ) -> None:
-        """(NOT IMPLEMENTED/RATE LIMITED GLOBALLY)"""
-        await ia.response.send_message("This command is not yet implemented!")
