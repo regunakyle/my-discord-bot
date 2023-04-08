@@ -6,12 +6,16 @@ services:
     image: regunakyle/discordbot
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DATABASE_CONNECTION_STRING: ${DATABASE_CONNECTION_STRING}
+      LOGGER_LEVEL: ${LOGGER_LEVEL}
+      # Used by old style prefix commands; this bot only has the <PREFIX>sync prefix command
+      PREFIX: ${PREFIX}
+      # Maximum file upload size, used by command like /pixiv
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      # Lavalink parameters, used by the Music module
       LAVALINK_IP: ${LAVALINK_IP}
       LAVALINK_PORT: ${LAVALINK_PORT}
       LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
-      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
-      DISABLE_MODULE: ${DISABLE_MODULE}
-      PREFIX: ${PREFIX}
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped

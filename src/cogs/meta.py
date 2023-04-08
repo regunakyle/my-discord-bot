@@ -4,18 +4,16 @@ import typing as ty
 from pathlib import Path
 
 import discord
-from discord import app_commands
 from discord.ext import commands
+from sqlalchemy import delete, select, update
 
-from ..utility import Utility as Util
+from .. import models
+from .cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
 
-class Meta(commands.Cog):
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-
+class Meta(CogBase):
     @commands.command()
     @commands.guild_only()
     async def sync(
@@ -28,6 +26,8 @@ class Meta(commands.Cog):
         Only the owner of the bot may use this command.
         Please use this once after every update!
         """
+        logger.info(f"sync {spec+' ' if spec else ''}invoked.")
+
         if not await self.bot.is_owner(ctx.author):
             await ctx.send("Only the bot owner may use this command!")
             return
@@ -125,35 +125,44 @@ class Meta(commands.Cog):
             await ia.response.send_message(embed=discord.Embed.from_dict(embedDict))
 
     @discord.app_commands.command()
-    @discord.app_commands.describe(
-        is_unset="Set to True if you want to unmark the subscription channel.",
-    )
-    async def setbotchannel(
-        self, ia: discord.Interaction, is_unset: bool = False
-    ) -> None:
-        """Mark the current channel as the subscription channel. All notification will be sent here."""
-        try:
-            if is_unset:
-                Util.runSQL(
-                    """UPDATE GuildInfo SET BotChannel = null WHERE GuildId = ?""",
-                    [ia.guild.id],
+    @discord.app_commands.checks.has_permissions(manage_channels=True)
+    @discord.app_commands.guild_only()
+    async def set_bot_channel(self, ia: discord.Interaction) -> None:
+        """(ADMIN) Mark (or unmark) the current channel as the subscription channel."""
+        resp = "Bot channel unset."
+        async with self.sessionmaker() as session:
+            if (
+                await session.execute(
+                    update(models.GuildInfo)
+                    .where(models.GuildInfo.guild_id == ia.guild.id)
+                    .where(models.GuildInfo.bot_channel == ia.channel.id)
+                    .values(bot_channel=None)
                 )
-            else:
-                Util.runSQL(
-                    "INSERT OR REPLACE INTO GuildInfo VALUES (?,?,?,Datetime())",
-                    [ia.guild.id, ia.guild.name, ia.channel.id],
-                )
-            await ia.response.send_message("Update complete.")
-        except Exception as e:
-            logger.error(e)
-            await ia.response.send_message("Operation failed. Something went wrong.")
+            ).rowcount == 0:
+                if (
+                    await session.execute(
+                        update(models.GuildInfo)
+                        .where(models.GuildInfo.guild_id == ia.guild.id)
+                        .values(bot_channel=ia.channel.id)
+                    )
+                ).rowcount == 0:
+                    session.add(
+                        models.GuildInfo(
+                            guild_id=ia.guild.id,
+                            guild_name=ia.guild.name,
+                            bot_channel=ia.channel.id,
+                        )
+                    )
+                resp = f"Bot channel set to <#{ia.channel.id}>."
+            await session.commit()
+        await ia.response.send_message(resp)
 
     @discord.app_commands.command()
     @discord.app_commands.describe(
         number_of_days="Number of days from today",
     )
-    async def log(self, ia: discord.Interaction, number_of_days: int = 0) -> None:
-        """Get log file. Only the owner of the bot can use this."""
+    async def get_log(self, ia: discord.Interaction, number_of_days: int = 0) -> None:
+        """(OWNER ONLY) Get log file."""
         if not await self.bot.is_owner(ia.user):
             await ia.response.send_message("Only the bot owner may use this command!")
             return
@@ -175,3 +184,55 @@ class Meta(commands.Cog):
             await ia.response.send_message(
                 f"File {fileName} not found.",
             )
+
+    @discord.app_commands.command()
+    @discord.app_commands.guild_only()
+    @discord.app_commands.checks.has_permissions(manage_channels=True)
+    @discord.app_commands.describe(
+        message="NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>"
+    )
+    async def set_welcome_message(
+        self, ia: discord.Interaction, message: str = ""
+    ) -> None:
+        """(ADMIN) Set welcome message send to newcomers of this server. Unset if no message inputted."""
+        # Special syntax
+        # Channel: <#ChannelNumber>
+        # User: <@UserID>
+        # Emote: <a:EmoteName:EmoteID>
+        if len(message) > 2000:
+            await ia.response.send_message("Your message is too long!")
+            return
+
+        resp = ""
+        async with self.sessionmaker() as session:
+            if not message:
+                await session.execute(
+                    update(models.GuildInfo)
+                    .where(models.GuildInfo.guild_id == ia.guild.id)
+                    .values(welcome_message=None)
+                )
+                resp = "Welcome message cleared."
+
+            else:
+                unescaped_msg = message.encode("latin-1", "backslashreplace").decode(
+                    "unicode-escape"
+                )
+                if (
+                    await session.execute(
+                        update(models.GuildInfo)
+                        .where(models.GuildInfo.guild_id == ia.guild.id)
+                        .values(welcome_message=unescaped_msg)
+                    )
+                ).rowcount == 0:
+                    session.add(
+                        models.GuildInfo(
+                            guild_id=ia.guild.id,
+                            guild_name=ia.guild.name,
+                            welcome_message=unescaped_msg,
+                        )
+                    )
+                resp = (
+                    f"Welcome message set. Example:\n<@{ia.user.id}>\n{unescaped_msg}"
+                )
+            await session.commit()
+        await ia.response.send_message(resp)

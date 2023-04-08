@@ -1,6 +1,6 @@
 # Reguna's Discord Bot
 
-Written in Python 3.11 using [discord.py](https://github.com/Rapptz/discord.py).
+Written in Python using [discord.py](https://github.com/Rapptz/discord.py).
 
 Data are stored in an embedded sqlite3 database file.
 
@@ -34,12 +34,17 @@ services:
     image: regunakyle/discordbot
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
+      # Use "sqlite+aiosqlite:///volume/db.sqlite3" if you are not sure
+      DATABASE_CONNECTION_STRING: ${DATABASE_CONNECTION_STRING}
+      LOGGER_LEVEL: ${LOGGER_LEVEL}
+      # Used by old style prefix commands; this bot only has the <PREFIX>sync prefix command
+      PREFIX: ${PREFIX}
+      # Maximum file upload size, used by command like /pixiv
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      # Lavalink parameters, used by the Music module
       LAVALINK_IP: ${LAVALINK_IP}
       LAVALINK_PORT: ${LAVALINK_PORT}
       LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
-      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
-      DISABLE_MODULE: ${DISABLE_MODULE}
-      PREFIX: ${PREFIX}
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
@@ -64,17 +69,16 @@ networks:
 
 1. Notify you when there are free game giveaways
 2. A music player to play Youtube video inside a voice channel
-3. Fun bot commands that might interest you (e.g. Currency convertion, Posting raw Pixiv images)
+3. Fun bot commands that might interest you
 
 ## TODO List
 
-- [ ] Dynamic welcome message
-- [ ] Add Spotify support
-- [ ] Music bot commands:
-  - [ ] Loop
-  - [ ] Move
-- [ ] Use an ORM for easier database management
-- [ ] Support for PostgreSQL
+- [ ] Bot commands:
+  - [ ] Music.loop
+  - [ ] Music.play: Add Spotify support
+- [ ] AI Chatbot support
+- [ ] Support for MySQL/MariaDB and PostgreSQL
+- [ ] Use alembic to make database migration scripts
 - [ ] Create a dashboard for the bot
 
 ## Notable commands
@@ -85,7 +89,7 @@ while those in `<angle brackets>` are optional.
 
 Default prefix for old style prefix command is `>>` (Can be changed in `.env` or `docker-compose.yaml`).
 
-### `{prefix}sync <option>`
+### `{prefix}sync`
 
 - Reload application commands (i.e. slash commands).
 
@@ -93,20 +97,24 @@ Default prefix for old style prefix command is `>>` (Can be changed in `.env` or
 
   **Please run this command once after first install and after every update!**
 
-  - `<option>`: For development purpose only, please refer to the source code :)
-
 ### `/help <command_name>`
 
 - Display all available commands
   - `<command_name>`: Display the information of the command
 
-### `/setbotchannel <is_unset>`
+### `/set_bot_channel`
 
 - Mark the current channel as the subscription channel.
 
-  All notification will be sent here.
+  All notifications will be sent in that channel.
 
-  - `<is_unset>`: Set to `True` if you want to unmark the subscription channel
+### `/set_welcome_message <message>`
+
+- Set the welcome message sent to the system channel when a new member joins the server.
+
+  - `<message>`: You can use `\n`, `<#ChannelNumber>`, `<@UserID>`, `<a:EmojiName:EmojiID>`.
+
+    If empty, unset the welcome message
 
 ### `/pixiv [pixiv_link] <image_number>`
 
@@ -115,7 +123,7 @@ Default prefix for old style prefix command is `>>` (Can be changed in `.env` or
   - `<image_number>`: Image number (for albums with multiple images), by default 1
 - **Important**: To use this command, first install `ffmepg`,
 
-  then run (in your python environment): `gallery-dl oauth:pixiv`
+  then run (in your python environment): `gallery-dl oauth:pixiv`, and follow the instructions given.
 
   - If you are using Docker, `ffmpeg` has already been installed for you.
 
@@ -123,11 +131,12 @@ Default prefix for old style prefix command is `>>` (Can be changed in `.env` or
 
     1. `docker exec -it <container-name-or-id> /bin/bash`
     2. `gallery-dl oauth:pixiv`
+    3. Follow the instructions given
 
 ### `/connect_node`
 
 - Connect to a new node from the Lavalink server.
 
-  Use this command if you experience problems with the music player.
+  Use this command if the music player is not working while the Lavalink server is up.
 
   Note: Do not use this command while the bot is playing music!
