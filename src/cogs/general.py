@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 def checkCooldown(
     ia: discord.Interaction,
 ) -> discord.app_commands.Cooldown | None:
-    """Global cooldown for commands, maximum 1 use per 5 seconds (unlimited for the bot owner)"""
+    """Global cooldown for commands, maximum 1 use per 2.5 seconds (unlimited for the bot owner)"""
     if ia.user.id == ia.client.application.owner.id:
         return None
-    return discord.app_commands.Cooldown(1, 5.0)
+    return discord.app_commands.Cooldown(1, 2.5)
 
 
 class General(CogBase):

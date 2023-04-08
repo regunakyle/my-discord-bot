@@ -161,14 +161,6 @@ class Music(CogBase):
     @discord.app_commands.command()
     @discord.app_commands.guild_only()
     @checkNodeExist
-    async def loop(self, ia: discord.Interaction) -> None:
-        """(NOT IMPLEMENTED) Loop the current playing song."""
-
-        await ia.response.send_message("This command is not yet implemented!")
-
-    @discord.app_commands.command()
-    @discord.app_commands.guild_only()
-    @checkNodeExist
     async def queue(self, ia: discord.Interaction) -> None:
         """Show all queued songs. A maximum of 20 songs are displayed."""
         if not ia.guild.voice_client:

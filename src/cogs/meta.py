@@ -189,21 +189,21 @@ class Meta(CogBase):
     @discord.app_commands.guild_only()
     @discord.app_commands.checks.has_permissions(manage_channels=True)
     @discord.app_commands.describe(
-        message="(ADMIN) NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>"
+        message="NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>"
     )
     async def set_welcome_message(
         self, ia: discord.Interaction, message: str = ""
     ) -> None:
-        """Set welcome message send to newcomers of this server. Unset if no message inputted."""
+        """(ADMIN) Set welcome message send to newcomers of this server. Unset if no message inputted."""
         # Special syntax
         # Channel: <#ChannelNumber>
         # User: <@UserID>
         # Emote: <a:EmoteName:EmoteID>
-        resp = ""
         if len(message) > 2000:
             await ia.response.send_message("Your message is too long!")
             return
 
+        resp = ""
         async with self.sessionmaker() as session:
             if not message:
                 await session.execute(
