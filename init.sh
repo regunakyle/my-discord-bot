@@ -18,11 +18,11 @@ md5_name=$(
     curl -JOL https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz.md5 \
         -w "%{filename_effective}"
 )
-md5sum -c $md5_name
+md5sum -c "$md5_name"
 
 # Extract the archive
 mkdir $dir_name
-tar xvf $xz_name -C $dir_name --strip-components 1
+tar xvf "$xz_name" -C "$dir_name" --strip-components 1
 cd $dir_name
 
 # Move it to PATH

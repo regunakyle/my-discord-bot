@@ -30,7 +30,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-discord-bot:${{ env.DOCKER_TAG_NAME }}
+          tags: ${{ github.repository }}:${{ env.DOCKER_TAG_NAME }}
       - name: Push README to Dockerhub
         uses: christian-korneck/update-container-description-action@v1
         if: github.ref_name == 'main'
@@ -38,7 +38,4 @@ jobs:
           DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
         with:
-          destination_container_repo: ${{ secrets.DOCKERHUB_USERNAME }}/my-discord-bot
-          provider: dockerhub
-          short_description: "Discord bot scripts for self use"
-          readme_file: "README.md"
+          destination_container_repo: ${{ github.repository }}
