@@ -26,9 +26,9 @@ class CogBase(commands.Cog):
         # Nitro level and their maximum upload size
         maxSize = 100
         if nitroCount < 7:
-            maxSize = 8
+            maxSize = 25
         elif nitroCount < 14:
-            maxSize = 16
+            maxSize = 50
 
         try:
             return min(maxSize, abs(int(os.getenv("MAX_FILE_SIZE"))))

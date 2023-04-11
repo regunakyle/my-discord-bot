@@ -82,8 +82,8 @@ class Meta(CogBase):
                 "color": 65327,
                 "author": {
                     "name": "Reguna (@Reguna#9236)",
-                    "url": "https://github.com/regunakyle/MyDiscordBot",
-                    "icon_url": "https://pbs.twimg.com/media/Fb0DzG9WIAALL2U?format=jpg&name=small",
+                    "url": "https://github.com/regunakyle/my-discord-bot",
+                    "icon_url": self.bot.get_user(263243377821089792).avatar.url,
                 },
                 "fields": [],
             }
