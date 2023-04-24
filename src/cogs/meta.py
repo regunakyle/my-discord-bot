@@ -257,14 +257,16 @@ class Meta(CogBase):
         )
 
         resp = ""
+        message = await ia.channel.send("Processing...")
         # This probably can be optimized
         for member in ia.guild.members:
-            resp += f"<@{member.id}>"
+            if not member.bot:
+                resp += f"<@{member.id}>"
             if len(resp) >= 2000:
-                await ia.edit_original_response(content=resp)
+                await message.edit(content=resp[:2000])
                 resp = f"<@{member.id}>"
-        await ia.edit_original_response(content=resp)
-        await ia.edit_original_response(content="Thread populated.")
+        await message.edit(content=resp)
+        await message.edit(content="Thread populated.")
 
     @discord.app_commands.command()
     @discord.app_commands.guild_only()

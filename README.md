@@ -130,7 +130,7 @@ Default prefix for old style prefix command is `>>` (Can be changed in `.env` or
     Start the discord bot container, then run in console:
 
     1. `docker exec -it <container-name-or-id> /bin/bash`
-    2. `gallery-dl oauth:pixiv`
+    2. `gallery-dl oauth:pixiv -o browser=`
     3. Follow the instructions given
 
 ### `/connect_node`
