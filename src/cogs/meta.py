@@ -189,7 +189,7 @@ class Meta(CogBase):
     @discord.app_commands.guild_only()
     @discord.app_commands.checks.has_permissions(manage_channels=True)
     @discord.app_commands.describe(
-        message="NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>"
+        message="Hint: NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>"
     )
     async def set_welcome_message(
         self, ia: discord.Interaction, message: str = ""
@@ -236,3 +236,49 @@ class Meta(CogBase):
                 )
             await session.commit()
         await ia.response.send_message(resp)
+
+    @discord.app_commands.command()
+    @discord.app_commands.guild_only()
+    @discord.app_commands.checks.has_permissions(manage_channels=True)
+    async def populate_thread(self, ia: discord.Interaction) -> None:
+        """(ADMIN) Populate the current thread by pinging (without any notification) every user of this guild. Unknown behavior if the thread is full."""
+
+        if "thread" not in ia.channel.type.name:
+            await ia.response.send_message("This channel is not a thread!")
+            return
+        if ia.guild.member_count >= 1000:
+            await ia.response.send_message(
+                "I cannot add this many people to a thread! (Only 1000 member maximum per thread)"
+            )
+            return
+
+        await ia.response.send_message(
+            "Please wait while I try to add everyone to this thread..."
+        )
+
+        resp = ""
+        # This probably can be optimized
+        for member in ia.guild.members:
+            resp += f"<@{member.id}>"
+            if len(resp) >= 2000:
+                await ia.edit_original_response(content=resp)
+                resp = f"<@{member.id}>"
+        await ia.edit_original_response(content=resp)
+        await ia.edit_original_response(content="Thread populated.")
+
+    @discord.app_commands.command()
+    @discord.app_commands.guild_only()
+    @discord.app_commands.checks.has_permissions(manage_channels=True)
+    @discord.app_commands.describe(
+        message="Hint: NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>",
+        force_all="If true, also send the message to the system channel of guilds without a bot channel.",
+    )
+    async def broadcast(
+        self, ia: discord.Interaction, message: str = "", force_all: bool = False
+    ) -> None:
+        """(OWNER ONLY) Send a message to every bot channel in database."""
+        if not await self.bot.is_owner(ia.user):
+            await ia.response.send_message("Only the bot owner may use this command!")
+            return
+
+        await ia.response.send_message("NOT IMPLEMENTED")
