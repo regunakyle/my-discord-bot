@@ -3,9 +3,10 @@ version: "3.9"
 services:
   discordbot:
     container_name: discordbot
-    image: regunakyle/discordbot
+    image: regunakyle/my-discord-bot
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
+      # Use "sqlite+aiosqlite:///volume/db.sqlite3" if you are not sure
       DATABASE_CONNECTION_STRING: ${DATABASE_CONNECTION_STRING}
       LOGGER_LEVEL: ${LOGGER_LEVEL}
       # Used by old style prefix commands; this bot only has the <PREFIX>sync prefix command
@@ -16,6 +17,7 @@ services:
       LAVALINK_IP: ${LAVALINK_IP}
       LAVALINK_PORT: ${LAVALINK_PORT}
       LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
+      XDG_CONFIG_HOME: /app/volume
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped

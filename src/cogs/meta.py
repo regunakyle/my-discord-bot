@@ -241,14 +241,14 @@ class Meta(CogBase):
     @discord.app_commands.guild_only()
     @discord.app_commands.checks.has_permissions(manage_channels=True)
     async def populate_thread(self, ia: discord.Interaction) -> None:
-        """(ADMIN) Populate the current thread by pinging (without any notification) every user of this guild. Unknown behavior if the thread is full."""
+        """(ADMIN) Populate the current thread without pinging anyone. Only works if your guild has fewer than 1000 members."""
 
         if "thread" not in ia.channel.type.name:
             await ia.response.send_message("This channel is not a thread!")
             return
         if ia.guild.member_count >= 1000:
             await ia.response.send_message(
-                "I cannot add this many people to a thread! (Only 1000 member maximum per thread)"
+                "I cannot add this many people to a thread! (1000 members maximum per thread)"
             )
             return
 
@@ -270,7 +270,6 @@ class Meta(CogBase):
 
     @discord.app_commands.command()
     @discord.app_commands.guild_only()
-    @discord.app_commands.checks.has_permissions(manage_channels=True)
     @discord.app_commands.describe(
         message="Hint: NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>",
         force_all="If true, also send the message to the system channel of guilds without a bot channel.",
@@ -283,4 +282,18 @@ class Meta(CogBase):
             await ia.response.send_message("Only the bot owner may use this command!")
             return
 
-        await ia.response.send_message("NOT IMPLEMENTED")
+        if len(message) > 2000:
+            await ia.response.send_message("Your message is too long!")
+            return
+
+        # Send to current guild first
+        await ia.response.send_message(message)
+
+        async with self.sessionmaker() as session:
+            guilds: ty.List[models.GuildInfo] = (
+                await session.execute(
+                    select(models.GuildInfo).where(
+                        models.GuildInfo.guild_id != ia.guild.id
+                    )
+                )
+            ).scalars()
