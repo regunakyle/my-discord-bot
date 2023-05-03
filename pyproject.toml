@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "discordbot"
-version = "2.0.0"
+name = "my-discord-bot"
+version = "2.1.0"
 description = "Discord Bot by Reguna"
 authors = ["Reguna <60984878+regunakyle@users.noreply.github.com>"]
 
@@ -10,7 +10,7 @@ feedparser = "^6"
 gallery-dl = "^1"
 python-dotenv = "^1"
 "discord.py" = { extras = ["voice"], version = "^2" }
-wavelink = "^1"
+wavelink = "^2"
 sqlalchemy = { extras = ["asyncio"], version = "^2" }
 aiosqlite = "^0"
 aiohttp = "^3"
