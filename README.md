@@ -76,8 +76,9 @@ networks:
 
 - [ ] Bot commands:
   - [ ] Music.loop
+  - [ ] General.chat
+  - [ ] General.draw
   - [ ] Music.play: Add Spotify support
-- [ ] AI Chatbot support
 - [ ] Support for MySQL/MariaDB and PostgreSQL
 - [ ] Use alembic to make database migration scripts
 - [ ] Create a dashboard for the bot

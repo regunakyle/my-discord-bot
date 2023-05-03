@@ -253,7 +253,7 @@ class Meta(CogBase):
             return
 
         await ia.response.send_message(
-            "Please wait while I try to add everyone to this thread..."
+            "Please wait a while I try to add everyone to this thread..."
         )
 
         resp = ""
@@ -272,11 +272,8 @@ class Meta(CogBase):
     @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         message="Hint: NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>",
-        force_all="If true, also send the message to the system channel of guilds without a bot channel.",
     )
-    async def broadcast(
-        self, ia: discord.Interaction, message: str = "", force_all: bool = False
-    ) -> None:
+    async def broadcast(self, ia: discord.Interaction, message: str = "") -> None:
         """(OWNER ONLY) Send a message to every bot channel in database."""
         if not await self.bot.is_owner(ia.user):
             await ia.response.send_message("Only the bot owner may use this command!")
@@ -286,14 +283,13 @@ class Meta(CogBase):
             await ia.response.send_message("Your message is too long!")
             return
 
-        # Send to current guild first
-        await ia.response.send_message(message)
-
         async with self.sessionmaker() as session:
-            guilds: ty.List[models.GuildInfo] = (
-                await session.execute(
-                    select(models.GuildInfo).where(
-                        models.GuildInfo.guild_id != ia.guild.id
-                    )
-                )
+            channels: ty.List[int] = (
+                await session.execute(select(models.GuildInfo.bot_channel))
             ).scalars()
+            await ia.response.send_message("Broadcasting...")
+            for channel in channels:
+                try:
+                    await self.bot.get_channel(channel).send(message)
+                except:
+                    pass
