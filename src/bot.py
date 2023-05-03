@@ -48,6 +48,38 @@ class discordBot(commands.Bot):
             )
             await session.commit()
 
+    async def on_guild_join(self, guild: discord.Guild) -> None:
+        logger.info(
+            f"Joined a new guild. Guild ID: {guild.id}; Guild Name: {guild.name}"
+        )
+        async with self.sessionmaker() as session:
+            try:
+                session.add(
+                    models.GuildInfo(
+                        guild_id=guild.id,
+                        guild_name=guild.name,
+                        bot_channel=guild.system_channel.id
+                        if guild.system_channel
+                        else None,
+                    )
+                )
+                await session.commit()
+            except Exception as e:
+                print("Error adding guild to database:", e)
+        if guild.system_channel:
+            await guild.system_channel.send(
+                "Hi everyone! Type `/help` to see all my available commands!"
+            )
+
+    async def on_guild_remove(self, guild: discord.Guild) -> None:
+        logger.info(f"Left a guild. Guild ID: {guild.id}; Guild Name: {guild.name}")
+        async with self.sessionmaker() as session:
+            # Delete removed guild from database
+            await session.execute(
+                delete(models.GuildInfo).where(models.GuildInfo.guild_id == guild.id)
+            )
+            await session.commit()
+
     async def on_member_join(self, member: discord.member) -> None:
         channel = member.guild.system_channel
         async with self.sessionmaker() as session:

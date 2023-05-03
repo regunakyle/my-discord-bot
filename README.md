@@ -31,7 +31,7 @@ version: "3.9"
 services:
   discordbot:
     container_name: discordbot
-    image: regunakyle/discordbot
+    image: regunakyle/my-discord-bot
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
       # Use "sqlite+aiosqlite:///volume/db.sqlite3" if you are not sure
@@ -45,6 +45,7 @@ services:
       LAVALINK_IP: ${LAVALINK_IP}
       LAVALINK_PORT: ${LAVALINK_PORT}
       LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
+      XDG_CONFIG_HOME: /app/volume
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
@@ -75,8 +76,9 @@ networks:
 
 - [ ] Bot commands:
   - [ ] Music.loop
+  - [ ] General.chat
+  - [ ] General.draw
   - [ ] Music.play: Add Spotify support
-- [ ] AI Chatbot support
 - [ ] Support for MySQL/MariaDB and PostgreSQL
 - [ ] Use alembic to make database migration scripts
 - [ ] Create a dashboard for the bot
@@ -130,7 +132,7 @@ Default prefix for old style prefix command is `>>` (Can be changed in `.env` or
     Start the discord bot container, then run in console:
 
     1. `docker exec -it <container-name-or-id> /bin/bash`
-    2. `gallery-dl oauth:pixiv`
+    2. `gallery-dl oauth:pixiv -o browser=`
     3. Follow the instructions given
 
 ### `/connect_node`

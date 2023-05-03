@@ -82,8 +82,8 @@ class Meta(CogBase):
                 "color": 65327,
                 "author": {
                     "name": "Reguna (@Reguna#9236)",
-                    "url": "https://github.com/regunakyle/MyDiscordBot",
-                    "icon_url": "https://pbs.twimg.com/media/Fb0DzG9WIAALL2U?format=jpg&name=small",
+                    "url": "https://github.com/regunakyle/my-discord-bot",
+                    "icon_url": self.bot.get_user(263243377821089792).avatar.url,
                 },
                 "fields": [],
             }
@@ -189,7 +189,7 @@ class Meta(CogBase):
     @discord.app_commands.guild_only()
     @discord.app_commands.checks.has_permissions(manage_channels=True)
     @discord.app_commands.describe(
-        message="NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>"
+        message="Hint: NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>"
     )
     async def set_welcome_message(
         self, ia: discord.Interaction, message: str = ""
@@ -236,3 +236,60 @@ class Meta(CogBase):
                 )
             await session.commit()
         await ia.response.send_message(resp)
+
+    @discord.app_commands.command()
+    @discord.app_commands.guild_only()
+    @discord.app_commands.checks.has_permissions(manage_channels=True)
+    async def populate_thread(self, ia: discord.Interaction) -> None:
+        """(ADMIN) Populate the current thread without pinging anyone. Only works if your guild has fewer than 1000 members."""
+
+        if "thread" not in ia.channel.type.name:
+            await ia.response.send_message("This channel is not a thread!")
+            return
+        if ia.guild.member_count >= 1000:
+            await ia.response.send_message(
+                "I cannot add this many people to a thread! (1000 members maximum per thread)"
+            )
+            return
+
+        await ia.response.send_message(
+            "Please wait a while I try to add everyone to this thread..."
+        )
+
+        resp = ""
+        message = await ia.channel.send("Processing...")
+        # This probably can be optimized
+        for member in ia.guild.members:
+            if not member.bot:
+                resp += f"<@{member.id}>"
+            if len(resp) >= 2000:
+                await message.edit(content=resp[:2000])
+                resp = f"<@{member.id}>"
+        await message.edit(content=resp)
+        await message.edit(content="Thread populated.")
+
+    @discord.app_commands.command()
+    @discord.app_commands.guild_only()
+    @discord.app_commands.describe(
+        message="Hint: NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>",
+    )
+    async def broadcast(self, ia: discord.Interaction, message: str = "") -> None:
+        """(OWNER ONLY) Send a message to every bot channel in database."""
+        if not await self.bot.is_owner(ia.user):
+            await ia.response.send_message("Only the bot owner may use this command!")
+            return
+
+        if len(message) > 2000:
+            await ia.response.send_message("Your message is too long!")
+            return
+
+        async with self.sessionmaker() as session:
+            channels: ty.List[int] = (
+                await session.execute(select(models.GuildInfo.bot_channel))
+            ).scalars()
+            await ia.response.send_message("Broadcasting...")
+            for channel in channels:
+                try:
+                    await self.bot.get_channel(channel).send(message)
+                except:
+                    pass
