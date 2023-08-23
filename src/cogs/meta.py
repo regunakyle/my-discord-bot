@@ -6,6 +6,7 @@ from pathlib import Path
 import discord
 from discord.ext import commands
 from sqlalchemy import delete, select, update
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from .. import models
 from .cog_base import CogBase
@@ -14,8 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 class Meta(CogBase):
+    def __init__(
+        self, bot: commands.Bot, sessionmaker: async_sessionmaker[AsyncSession]
+    ):
+        super().__init__(bot, sessionmaker)
+
     @commands.command()
-    @commands.guild_only()
     async def sync(
         self,
         ctx: commands.Context,
@@ -81,7 +86,7 @@ class Meta(CogBase):
                 "description": f"{self.bot.description}",
                 "color": 65327,
                 "author": {
-                    "name": "Reguna (@Reguna#9236)",
+                    "name": "Reguna (reguna)",
                     "url": "https://github.com/regunakyle/my-discord-bot",
                     "icon_url": self.bot.get_user(263243377821089792).avatar.url,
                 },
@@ -269,9 +274,8 @@ class Meta(CogBase):
         await message.edit(content="Thread populated.")
 
     @discord.app_commands.command()
-    @discord.app_commands.guild_only()
     @discord.app_commands.describe(
-        message="Hint: NO double quotes; Linebreak: \\n; Self-explanatory: <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>",
+        message="NO double quotes. Hint: \\n, <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>",
     )
     async def broadcast(self, ia: discord.Interaction, message: str = "") -> None:
         """(OWNER ONLY) Send a message to every bot channel in database."""

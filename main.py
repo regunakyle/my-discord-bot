@@ -9,8 +9,7 @@ from dotenv import load_dotenv
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from src import models
-from src.bot import discordBot
+from src import discordBot, models
 
 
 async def main() -> None:
@@ -69,9 +68,6 @@ async def main() -> None:
 
     logger.info("STARTING DISCORD BOT PROCESS...\n")
     await bot.start(os.getenv("DISCORD_TOKEN"))
-
-    # TODO: Cleanup DB connections if killed
-    # await engine.dispose()
 
 
 if __name__ == "__main__":
