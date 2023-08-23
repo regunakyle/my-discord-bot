@@ -6,24 +6,20 @@ from pathlib import Path
 
 import aiohttp
 import discord
+from discord.ext import commands
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from .cog_base import CogBase
+from .cog_base import CogBase, check_cooldown
 
 logger = logging.getLogger(__name__)
 
 
-# TODO: Find a way to put this function in CogBase while being
-# compatible with the dynamic_cooldown decorator
-def checkCooldown(
-    ia: discord.Interaction,
-) -> discord.app_commands.Cooldown | None:
-    """Global cooldown for commands, maximum 1 use per 2.5 seconds (unlimited for the bot owner)"""
-    if ia.user.id == ia.client.application.owner.id:
-        return None
-    return discord.app_commands.Cooldown(1, 2.5)
-
-
 class General(CogBase):
+    def __init__(
+        self, bot: commands.Bot, sessionmaker: async_sessionmaker[AsyncSession]
+    ):
+        super().__init__(bot, sessionmaker)
+
     @discord.app_commands.command()
     async def hello(
         self,
@@ -36,7 +32,8 @@ class General(CogBase):
         )
 
     @discord.app_commands.command()
-    @discord.app_commands.checks.dynamic_cooldown(checkCooldown)
+    @discord.app_commands.checks.dynamic_cooldown(check_cooldown)
+    @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         pixiv_link="Pixiv image link",
         image_number="Image number (for albums with multiple images); 1 by default",
@@ -62,7 +59,7 @@ class General(CogBase):
         await ia.response.defer()
 
         # Both Discord and Gallery-DL use MiB
-        command = f"gallery-dl {link} --range {int(image_number)} --ugoira-conv --filesize-max {self.getMaxFileSize(ia.guild.premium_subscription_count)}M"
+        command = f"gallery-dl {link} --range {int(image_number)} --ugoira-conv --filesize-max {self.get_max_file_size(ia.guild.premium_subscription_count)}M"
 
         proc = await asyncio.create_subprocess_shell(
             command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
@@ -89,7 +86,7 @@ class General(CogBase):
                 discord.Embed(title="Pixiv Image")
                 .add_field(
                     name="Shared by",
-                    value=f"{ia.user.display_name}#{ia.user.discriminator}",
+                    value=f"{ia.user.display_name}",
                     inline=False,
                 )
                 .add_field(name="Source", value=pixiv_link, inline=False)
@@ -101,7 +98,8 @@ class General(CogBase):
             link.unlink()
 
     @discord.app_commands.command()
-    @discord.app_commands.checks.dynamic_cooldown(checkCooldown)
+    @discord.app_commands.checks.dynamic_cooldown(check_cooldown)
+    @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         amount="Amount in <starting_currency>, ranged from 0 to 1,000,000,000",
         starting_currency="Starting currency, e.g. HKD",

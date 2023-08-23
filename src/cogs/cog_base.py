@@ -4,10 +4,22 @@ import tempfile
 import typing as ty
 
 import aiohttp
+import discord
 from discord.ext import commands
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
+
+
+# TODO: Find a way to put this function in CogBase while being
+# compatible with the dynamic_cooldown decorator
+def check_cooldown(
+    ia: discord.Interaction,
+) -> discord.app_commands.Cooldown | None:
+    """Global cooldown for commands, maximum 1 use per 2.5 seconds (unlimited for the bot owner)"""
+    if ia.user.id == ia.client.application.owner.id:
+        return None
+    return discord.app_commands.Cooldown(1, 2.5)
 
 
 class CogBase(commands.Cog):
@@ -17,7 +29,7 @@ class CogBase(commands.Cog):
         self.bot = bot
         self.sessionmaker = sessionmaker
 
-    def getMaxFileSize(self, nitroCount: int = 0) -> int:
+    def get_max_file_size(self, nitroCount: int = 0) -> int:
         """Return the maximum file size (in MiB) supported by the current guild.
 
         If MAX_FILE_SIZE in .env is smaller than this size, return MAX_FILE_SIZE instead.
@@ -39,7 +51,7 @@ class CogBase(commands.Cog):
         """Download the content of <url> to <file> and return <file>.
 
         Note: NOT compatible with discord.File."""
-        # TODO: Fix compatibility with discord.File
+        # TODO: Fix compatibility issue with discord.File
         file = tempfile.TemporaryFile()
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:

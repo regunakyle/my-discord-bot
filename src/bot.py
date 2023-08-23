@@ -32,7 +32,7 @@ class discordBot(commands.Bot):
         self.help_command = None
         self.sessionmaker = sessionmaker
 
-    async def on_ready(self) -> None:
+    async def setup_hook(self) -> None:
         logger.info(f"Logged in as {self.user.name} ({str(self.user.id)}).")
 
         # Add all cogs
