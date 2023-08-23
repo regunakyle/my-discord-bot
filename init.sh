@@ -12,11 +12,11 @@ pushd $dir_name
 # Download compiled binaries and perform filehash checking
 xz_name=$(
     curl -JOL https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz \
-        -w "%{filename_effective}"
+        -w "%{filename_effective}" --retry-all-errors 3
 )
 md5_name=$(
     curl -JOL https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz.md5 \
-        -w "%{filename_effective}"
+        -w "%{filename_effective}" --retry-all-errors 3
 )
 md5sum -c "$md5_name"
 
