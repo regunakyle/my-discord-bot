@@ -13,13 +13,11 @@ pushd $dir_name
 # TODO: Build a static FFMPEG instead of downloading
 xz_name=$(
     curl -JOL https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz \
-        -w "%{filename_effective}" || curl -JOL https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz \
-        -w "%{filename_effective}"
+        -w "%{filename_effective}" --retry 3 --retry-all-errors
 )
 md5_name=$(
     curl -JOL https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz.md5 \
-        -w "%{filename_effective}" || curl -JOL https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz.md5 \
-        -w "%{filename_effective}"
+        -w "%{filename_effective}" --retry 3 --retry-all-errors
 )
 md5sum -c "$md5_name"
 
