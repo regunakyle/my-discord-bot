@@ -51,7 +51,7 @@ services:
     restart: unless-stopped
   lavalink:
     container_name: lavalink
-    image: fredboat/lavalink
+    image: fredboat/lavalink:3.7
     environment:
       server.port: ${LAVALINK_PORT}
       lavalink.server.password: ${LAVALINK_PASSWORD}
@@ -59,7 +59,7 @@ services:
 
 volumes:
   dbot-vol:
-    name: dbot-vol
+    name: discord-bot-vol
 
 networks:
   default:
