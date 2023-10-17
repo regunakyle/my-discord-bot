@@ -150,4 +150,3 @@ cython_debug/
 Dockerfile
 docker-compose.yaml
 poetry.lock
-pyproject.toml
