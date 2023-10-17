@@ -145,3 +145,9 @@ cython_debug/
 /.history
 .dbeaver
 .project
+
+# Docker Extras
+Dockerfile
+docker-compose.yaml
+poetry.lock
+pyproject.toml
