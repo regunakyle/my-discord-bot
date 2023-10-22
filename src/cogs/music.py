@@ -3,6 +3,7 @@ import os
 import typing as ty
 from functools import wraps
 
+import aiohttp
 import discord
 import wavelink
 from discord.ext import commands, tasks
@@ -45,21 +46,24 @@ class Music(CogBase):
     ######################################
     # UTILITIES
 
-    async def connect_node(self) -> None:
+    async def connect_node(self) -> ty.Dict[str, wavelink.Node]:
         """Connect to a Lavalink node."""
         await self.bot.wait_until_ready()
         logger.info("Attempting to connect to a node...")
-        await wavelink.NodePool.connect(
-            client=self.bot,
-            nodes=[
-                wavelink.Node(
-                    uri=f'{os.getenv("LAVALINK_IP")}:{os.getenv("LAVALINK_PORT")}',
-                    password=os.getenv("LAVALINK_PASSWORD", ""),
-                    # use_http=True,
-                    retries=3,
-                )
-            ],
-        )
+        try:
+            return await wavelink.NodePool.connect(
+                client=self.bot,
+                nodes=[
+                    wavelink.Node(
+                        uri=f'{os.getenv("LAVALINK_IP")}:{os.getenv("LAVALINK_PORT")}',
+                        password=os.getenv("LAVALINK_PASSWORD", ""),
+                        # use_http=True,
+                        retries=3,
+                    )
+                ],
+            )
+        except aiohttp.ClientConnectionError as e:
+            return {}
 
     @tasks.loop(minutes=1)
     async def check_node_connection_task(self) -> None:
@@ -311,3 +315,25 @@ class Music(CogBase):
         await ia.response.send_message("Ready to leave. Goodbye!")
         vc.queue.reset()
         await vc.disconnect()
+
+    @discord.app_commands.command()
+    @discord.app_commands.guild_only()
+    async def connect_music(
+        self,
+        ia: discord.Interaction,
+    ) -> None:
+        """(OWNER ONLY) Use this if the music player is not working.
+
+        Do NOT use this when the bot is playing music."""
+
+        if not await self.bot.is_owner(ia.user):
+            await ia.response.send_message("Only the bot owner may use this command!")
+            return
+
+        # Delay response, maximum 15 mins
+        await ia.response.defer()
+
+        if await self.connect_node():
+            await ia.followup.send("Connection successful.")
+
+        await ia.followup.send("Reconnection failed.")

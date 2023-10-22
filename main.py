@@ -19,7 +19,7 @@ async def main() -> None:
 
     # Logger
     logger = logging.getLogger()
-    logger.setLevel(os.getenv("LOGGER_LEVEL") if os.getenv("LOGGER_LEVEL") else "INFO")
+    logger.setLevel("INFO")
     logger.addHandler(logging.StreamHandler())
     # Time Rotating File Handler
     logHandler = TimedRotatingFileHandler(
@@ -37,7 +37,7 @@ async def main() -> None:
     load_dotenv(dotenv_path="./.env")
     for env in ["DISCORD_TOKEN", "PREFIX", "DATABASE_CONNECTION_STRING"]:
         if not os.getenv(env):
-            errMsg = f"{env} is not set in both .env and the OS environment."
+            errMsg = f"{env} is not set in both .env and the OS environment. Exiting..."
             logger.error(errMsg)
             raise Exception(errMsg)
 
