@@ -19,7 +19,7 @@ def check_node_exist(func: ty.Callable) -> ty.Callable:
     """Check for connected node. If not found, send error message."""
 
     @wraps(func)
-    async def _wrapper(*args, **kwargs):
+    async def _wrapper(*args: ty.List[ty.Any], **kwargs: ty.Dict[str, ty.Any]) -> None:
         # args[0] is self, args[1] is an discord.Interaction object
         try:
             wavelink.NodePool.get_connected_node()
@@ -67,6 +67,7 @@ class Music(CogBase):
             wavelink.NodePool.get_connected_node()
         except wavelink.InvalidNode:
             if self.reconnect_count < 5:
+                self.reconnect_count += 1
                 await self.connect_node()
 
     async def check_user_bot_same_channel(self, ia: discord.Interaction) -> bool:
@@ -215,7 +216,7 @@ class Music(CogBase):
                 },
                 {
                     "name": "Total queue size",
-                    "value": len(vc.queue),
+                    "value": len(vc.queue) + 1,
                     "inline": True,
                 },
                 {

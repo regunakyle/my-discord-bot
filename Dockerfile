@@ -21,8 +21,6 @@ WORKDIR /app
 
 COPY --chown=nonroot . .
 
-COPY .gallery-dl.conf /etc/gallery-dl.conf
-
 # Override system Python with one in venv
 ENV PATH=/opt/venv/bin:$PATH
 

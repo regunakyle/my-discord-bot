@@ -1,4 +1,5 @@
 import asyncio
+import atexit
 import logging
 import os
 from logging.handlers import TimedRotatingFileHandler
@@ -15,7 +16,6 @@ from src import discordBot, models
 async def main() -> None:
     # Initialization
     Path("./volume/logs").mkdir(parents=True, exist_ok=True)
-    Path("./volume/gallery-dl").mkdir(parents=True, exist_ok=True)
 
     # Logger
     logger = logging.getLogger()
@@ -68,6 +68,8 @@ async def main() -> None:
 
     logger.info("STARTING DISCORD BOT PROCESS...\n")
     await bot.start(os.getenv("DISCORD_TOKEN"))
+
+    # TODO: atexit
 
 
 if __name__ == "__main__":

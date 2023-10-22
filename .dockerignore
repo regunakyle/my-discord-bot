@@ -145,8 +145,15 @@ cython_debug/
 /.history
 .dbeaver
 .project
+/gallery-dl
 
 # Docker Extras
 Dockerfile
 docker-compose.yaml
 poetry.lock
+pyproject.toml
+.git
+.github
+.gitignore
+.dockerignore
+.env.example
