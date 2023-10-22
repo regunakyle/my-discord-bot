@@ -5,7 +5,6 @@ on:
 
 jobs:
   docker:
-    # TODO: Find a way to make Github cache the build progress
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

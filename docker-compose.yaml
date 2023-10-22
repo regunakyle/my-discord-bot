@@ -5,28 +5,27 @@ services:
     container_name: discordbot
     image: regunakyle/my-discord-bot
     environment:
-      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_TOKEN: <YOUR_TOKEN_HERE>
       # Use "sqlite+aiosqlite:///volume/db.sqlite3" if you are not sure
-      DATABASE_CONNECTION_STRING: ${DATABASE_CONNECTION_STRING}
-      LOGGER_LEVEL: ${LOGGER_LEVEL}
+      DATABASE_CONNECTION_STRING: sqlite+aiosqlite:///volume/db.sqlite3
       # Used by old style prefix commands; this bot only has the <PREFIX>sync prefix command
-      PREFIX: ${PREFIX}
+      PREFIX: ">>"
       # Maximum file upload size, used by command like /pixiv
-      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      MAX_FILE_SIZE: 25
       # Lavalink parameters, used by the Music module
-      LAVALINK_IP: ${LAVALINK_IP}
-      LAVALINK_PORT: ${LAVALINK_PORT}
-      LAVALINK_PASSWORD: ${LAVALINK_PASSWORD}
-      XDG_CONFIG_HOME: /app/volume
+      LAVALINK_IP: lavalink
+      LAVALINK_PORT: 2333
+      LAVALINK_PASSWORD: youshallnotpass
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
+
   lavalink:
     container_name: lavalink
     image: fredboat/lavalink:3.7
     environment:
-      server.port: ${LAVALINK_PORT}
-      lavalink.server.password: ${LAVALINK_PASSWORD}
+      server.port: 2333
+      lavalink.server.password: youshallnotpass
     restart: unless-stopped
 
 volumes:

@@ -145,3 +145,4 @@ cython_debug/
 /.history
 .dbeaver
 .project
+/gallery-dl

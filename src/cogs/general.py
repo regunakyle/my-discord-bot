@@ -79,17 +79,11 @@ class General(CogBase):
                 await ia.followup.send(f"Something went wrong: \n{stderr.decode()}")
         else:
             link = Path(
-                f'./volume/gallery-dl/{re.compile(r"pixiv.*").search(stdout.decode()).group()}'
+                f'./gallery-dl/{re.compile(r"pixiv.*").search(stdout.decode()).group()}'
             )
 
-            embed = (
-                discord.Embed(title="Pixiv Image")
-                .add_field(
-                    name="Shared by",
-                    value=f"{ia.user.display_name}",
-                    inline=False,
-                )
-                .add_field(name="Source", value=pixiv_link, inline=False)
+            embed = discord.Embed(title="Pixiv Image").add_field(
+                name="Source", value=pixiv_link, inline=False
             )
             await ia.followup.send(
                 embed=embed,
