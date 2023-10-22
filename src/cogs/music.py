@@ -13,6 +13,7 @@ from .cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
+# TODO: Refactor
 # TODO: Periodically check the count of non-bot members in the same voice channel, quit if it's 0
 
 
@@ -107,7 +108,8 @@ class Music(CogBase):
         for member in payload.player.channel.members:
             if not member.bot:
                 await payload.player.channel.send(
-                    f"Now playing *{payload.track.title}*!", delete_after=30
+                    f"Now playing *{payload.track.title}*{' (looping)' if payload.player.queue.loop else ''}!",
+                    delete_after=30,
                 )
                 return
 
@@ -120,15 +122,17 @@ class Music(CogBase):
     async def on_wavelink_track_end(self, payload: wavelink.TrackEventPayload) -> None:
         """Event fired when a node has finished playing a song."""
         if payload.reason.upper() in ("FINISHED", "STOPPED"):
-            if len(payload.player.queue) > 0:
-                await payload.player.play(await payload.player.queue.get_wait())
-            else:
+            try:
+                track = payload.player.queue.get()
+            except wavelink.QueueEmpty:
                 payload.player.queue.reset()
                 await payload.player.channel.send(
                     "All songs played. Leaving the voice channel..."
                 )
                 await payload.player.disconnect()
                 return
+
+            await payload.player.play(track)
         else:
             payload.player.queue.reset()
             await payload.player.channel.send(
@@ -193,7 +197,7 @@ class Music(CogBase):
         await vc.queue.put_wait(tracks[0])
         await ia.followup.send(f"Song *{tracks[0].title}* added to queue!")
         if not vc.is_playing():
-            await vc.play(await vc.queue.get_wait())
+            await vc.play(vc.queue.get())
 
     @discord.app_commands.command()
     @discord.app_commands.guild_only()
@@ -229,8 +233,8 @@ class Music(CogBase):
                     "inline": True,
                 },
                 {
-                    "name": "Playing in",
-                    "value": vc.channel.name,
+                    "name": "Looping",
+                    "value": vc.queue.loop,
                     "inline": True,
                 },
             ],
@@ -273,6 +277,37 @@ class Music(CogBase):
         else:
             await vc.pause()
             await ia.response.send_message("Music player paused!")
+
+    @discord.app_commands.command()
+    @discord.app_commands.guild_only()
+    @check_node_exist
+    async def loop(self, ia: discord.Interaction) -> None:
+        """Loop the current playing song. Use again to cancel looping."""
+        if not ia.guild.voice_client:
+            await ia.response.send_message("I am not in a voice channel!")
+            return
+        else:
+            vc: wavelink.Player = ia.guild.voice_client
+
+        if not await self.check_user_bot_same_channel(ia):
+            await ia.response.send_message(
+                "You must be in the same voice channel with me to use this command!"
+            )
+            return
+
+        if vc.is_playing():
+            if not vc.queue.loop:
+                vc.queue.loop = True
+                await ia.response.send_message(
+                    f"Start looping the current song: *{vc.current.title}*..."
+                )
+                return
+            else:
+                vc.queue.loop = False
+                await ia.response.send_message(f"Stop looping the current song...")
+                return
+        else:
+            await ia.response.send_message("I am not playing any music!")
 
     @discord.app_commands.command()
     @discord.app_commands.guild_only()
