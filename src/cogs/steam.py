@@ -150,7 +150,7 @@ class Steam(CogBase):
                             )
                         )
                         await session.commit()
-                    except Exception as e:
+                    except:
                         pass
         logger.info("Check giveaway ended.")
 

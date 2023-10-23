@@ -63,7 +63,7 @@ class Music(CogBase):
                     )
                 ],
             )
-        except aiohttp.ClientConnectionError as e:
+        except aiohttp.ClientConnectionError:
             return {}
 
     @tasks.loop(minutes=1)
@@ -195,7 +195,14 @@ class Music(CogBase):
         )
 
         await vc.queue.put_wait(tracks[0])
-        await ia.followup.send(f"Song *{tracks[0].title}* added to queue!")
+        await ia.followup.send(
+            f"Song *{tracks[0].title}* added to queue!"
+            + (
+                f"\n(Note: Currently looping *{vc.current.title}*)"
+                if vc.queue.loop
+                else ""
+            )
+        )
         if not vc.is_playing():
             await vc.play(vc.queue.get())
 
@@ -299,12 +306,12 @@ class Music(CogBase):
             if not vc.queue.loop:
                 vc.queue.loop = True
                 await ia.response.send_message(
-                    f"Start looping the current song: *{vc.current.title}*..."
+                    f"Looping started. Run /loop again to cancel..."
                 )
                 return
             else:
                 vc.queue.loop = False
-                await ia.response.send_message(f"Stop looping the current song...")
+                await ia.response.send_message(f"Looping stopped.")
                 return
         else:
             await ia.response.send_message("I am not playing any music!")

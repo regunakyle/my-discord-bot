@@ -33,7 +33,6 @@ If you prefer Docker, you can use the docker compose file [here](docker-compose.
 - [ ] Bot commands:
   - [ ] General.chat
   - [ ] Music.play: Add Spotify support
-- [ ] Support for MySQL/MariaDB and PostgreSQL
 
 ## Notable commands
 

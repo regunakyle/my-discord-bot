@@ -13,15 +13,15 @@ FROM python:3.11-slim AS build-image
 COPY --from=compile-image /opt/venv /opt/venv
 COPY --from=compile-image /bin/ffmpeg /bin/ffmpeg
 
-RUN useradd --create-home nonroot
-
-USER nonroot
+# Override system Python with one in venv
+ENV PATH=/opt/venv/bin:$PATH
 
 WORKDIR /app
 
-COPY --chown=nonroot . .
+COPY . .
 
-# Override system Python with one in venv
-ENV PATH=/opt/venv/bin:$PATH
+RUN useradd nonroot && mkdir gallery-dl && chmod -R 777 gallery-dl
+
+USER nonroot
 
 CMD ["python", "-u", "main.py"]

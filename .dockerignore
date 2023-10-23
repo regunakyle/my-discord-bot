@@ -157,3 +157,4 @@ pyproject.toml
 .gitignore
 .dockerignore
 .env.example
+/test
