@@ -19,6 +19,8 @@ aiohttp = "^3"
 mypy = "*"
 ipykernel = "*"
 black = "*"
+dpytest = "*"
+pytest = "*"
 
 [tool.mypy]
 strict = true

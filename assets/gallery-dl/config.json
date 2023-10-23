@@ -1,5 +1,5 @@
 {
   "cache": {
-    "file": "/app/volume/gallery-dl/gallery-dl.sqlite3"
+    "file": "/app/volume/gallery-dl/cache.sqlite3"
   }
 }
