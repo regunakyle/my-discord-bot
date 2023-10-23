@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "my-discord-bot"
-version = "2.1.0"
+version = "2.3.1"
 description = "Discord Bot by Reguna"
 authors = ["Reguna <60984878+regunakyle@users.noreply.github.com>"]
 

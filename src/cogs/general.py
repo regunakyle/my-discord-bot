@@ -136,7 +136,7 @@ class General(CogBase):
             await ia.followup.send(
                 f"{amount} {starting_currency.upper()} = {newAmt} {target_currency.upper()}",
             )
-        except AssertionError as e:
+        except AssertionError:
             await ia.followup.send(
                 "Please enter a value between 0 and 1,000,000,000.",
             )

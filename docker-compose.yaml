@@ -3,7 +3,7 @@ version: "3.9"
 services:
   discordbot:
     container_name: discordbot
-    image: regunakyle/my-discord-bot
+    image: regunakyle/my-discord-bot:latest
     environment:
       DISCORD_TOKEN: <YOUR_TOKEN_HERE>
       # Use "sqlite+aiosqlite:///volume/db.sqlite3" if you are not sure
@@ -16,6 +16,7 @@ services:
       LAVALINK_IP: lavalink
       LAVALINK_PORT: 2333
       LAVALINK_PASSWORD: youshallnotpass
+      XDG_CONFIG_HOME: /app/volume
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
