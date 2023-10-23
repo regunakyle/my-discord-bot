@@ -20,7 +20,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN useradd nonroot
+RUN useradd nonroot && mkdir gallery-dl && chmod -R 777 gallery-dl
 
 USER nonroot
 
