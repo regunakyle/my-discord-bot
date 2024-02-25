@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from .. import models
-from .cog_base import CogBase
+from ._cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class Steam(CogBase):
     def __init__(
         self, bot: commands.Bot, sessionmaker: async_sessionmaker[AsyncSession]
-    ):
+    ) -> None:
         super().__init__(bot, sessionmaker)
         self.taskName = "steam_giveaway"
         self.giveawayTask.start()
@@ -43,19 +43,6 @@ class Steam(CogBase):
                     .where(models.GuildTask.task_name == self.taskName)
                 )
             ).rowcount == 0:
-                if not (
-                    await session.execute(
-                        select(models.GuildInfo).where(
-                            models.GuildInfo.guild_id == ia.guild.id
-                        )
-                    )
-                ).scalar():
-                    session.add(
-                        models.GuildInfo(
-                            guild_id=ia.guild.id,
-                            guild_name=ia.guild.name,
-                        )
-                    )
                 session.add(
                     models.GuildTask(
                         guild_id=ia.guild.id,
@@ -119,6 +106,8 @@ class Steam(CogBase):
 
     # Schedule Job Scripts Start
     async def getNewGiveaways(self) -> None:
+        """Fetch giveaways from isthereanydeal.com and insert into database."""
+
         logger.info("Fetching data from isthereanydeal.com...")
         datePattern = re.compile(r"[eE]xpires? on (\d{4}-\d{2}-\d{2})")
         rss = feedparser.parse(
@@ -150,13 +139,15 @@ class Steam(CogBase):
                             )
                         )
                         await session.commit()
-                    except:
+                    except Exception:
                         pass
         logger.info("Check giveaway ended.")
 
     async def filterGuildGiveaway(
         self, guildId: str
     ) -> ty.List[models.SteamGiveawayHistory]:
+        """Filter the giveaway list per guild by the each guild's blacklist table."""
+
         result = []
         async with self.sessionmaker() as session:
             giveaways: ty.List[models.SteamGiveawayHistory] = (
@@ -202,7 +193,8 @@ class Steam(CogBase):
 
     @tasks.loop(hours=12)
     async def giveawayTask(self) -> None:
-        # Get new giveaways
+        """Discord task: Get new giveaways."""
+
         await self.getNewGiveaways()
 
         async with self.sessionmaker() as session:

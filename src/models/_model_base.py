@@ -2,7 +2,7 @@ import uuid
 
 from sqlalchemy.orm import DeclarativeBase, MappedAsDataclass
 
-from .guid import GUID
+from ._guid import GUID
 
 
 class ModelBase(MappedAsDataclass, DeclarativeBase):

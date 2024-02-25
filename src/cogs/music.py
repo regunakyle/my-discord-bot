@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import typing as ty
@@ -9,7 +10,7 @@ import wavelink
 from discord.ext import commands, tasks
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from .cog_base import CogBase
+from ._cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,8 @@ def check_node_exist(func: ty.Callable) -> ty.Callable:
 
     @wraps(func)
     async def _wrapper(*args: ty.List[ty.Any], **kwargs: ty.Dict[str, ty.Any]) -> None:
-        # args[0] is self, args[1] is an discord.Interaction object
+        """args[0] is self, args[1] is an discord.Interaction object"""
+
         try:
             wavelink.NodePool.get_connected_node()
         except wavelink.InvalidNode:
@@ -39,7 +41,7 @@ def check_node_exist(func: ty.Callable) -> ty.Callable:
 class Music(CogBase):
     def __init__(
         self, bot: commands.Bot, sessionmaker: async_sessionmaker[AsyncSession]
-    ):
+    ) -> None:
         super().__init__(bot, sessionmaker)
         self.reconnect_count = 0
         self.check_node_connection_task.start()
@@ -68,6 +70,7 @@ class Music(CogBase):
 
     @tasks.loop(minutes=1)
     async def check_node_connection_task(self) -> None:
+        """Discord task: Try to connect to a Lavalink node unless exceeded maximum retries."""
         try:
             wavelink.NodePool.get_connected_node()
         except wavelink.InvalidNode:
@@ -83,7 +86,7 @@ class Music(CogBase):
         if vc:
             try:
                 return vc.channel.id == ia.user.voice.channel.id
-            except:
+            except Exception:
                 return False
         else:
             return True
@@ -132,8 +135,10 @@ class Music(CogBase):
                 await payload.player.disconnect()
                 return
 
+            await asyncio.sleep(1)
             await payload.player.play(track)
         else:
+            logger.error(f"Music playing stopped. Reason: {payload.reason.upper()}")
             payload.player.queue.reset()
             await payload.player.channel.send(
                 "Something went wrong. I will be quitting now..."
@@ -306,12 +311,12 @@ class Music(CogBase):
             if not vc.queue.loop:
                 vc.queue.loop = True
                 await ia.response.send_message(
-                    f"Looping started. Run /loop again to cancel..."
+                    "Looping started. Run /loop again to cancel..."
                 )
                 return
             else:
                 vc.queue.loop = False
-                await ia.response.send_message(f"Looping stopped.")
+                await ia.response.send_message("Looping stopped.")
                 return
         else:
             await ia.response.send_message("I am not playing any music!")
@@ -320,7 +325,7 @@ class Music(CogBase):
     @discord.app_commands.guild_only()
     @check_node_exist
     async def skip(self, ia: discord.Interaction) -> None:
-        """Stop and skip the currently playing song."""
+        """Stop and skip the currently playing song. Also untoggles looping."""
         if not ia.guild.voice_client:
             await ia.response.send_message("I am not in a voice channel!")
             return
@@ -334,7 +339,10 @@ class Music(CogBase):
             return
 
         if vc.is_playing():
-            await ia.response.send_message("Skipping the current song...")
+            await ia.response.send_message(
+                f"Skipping the current song. {'Looping stopped.' if vc.queue.loop else ''}"
+            )
+            vc.queue.loop = False
             await vc.stop()
 
     @discord.app_commands.command()

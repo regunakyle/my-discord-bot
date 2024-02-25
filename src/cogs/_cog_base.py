@@ -16,16 +16,16 @@ logger = logging.getLogger(__name__)
 def check_cooldown(
     ia: discord.Interaction,
 ) -> discord.app_commands.Cooldown | None:
-    """Global cooldown for commands, maximum 1 use per 2.5 seconds (unlimited for the bot owner)"""
+    """Global cooldown for commands, maximum 1 use per 2 seconds (unlimited for the bot owner)"""
     if ia.user.id == ia.client.application.owner.id:
         return None
-    return discord.app_commands.Cooldown(1, 2.5)
+    return discord.app_commands.Cooldown(1, 2)
 
 
 class CogBase(commands.Cog):
     def __init__(
         self, bot: commands.Bot, sessionmaker: async_sessionmaker[AsyncSession]
-    ):
+    ) -> None:
         self.bot = bot
         self.sessionmaker = sessionmaker
 
@@ -44,7 +44,7 @@ class CogBase(commands.Cog):
 
         try:
             return min(maxSize, abs(int(os.getenv("MAX_FILE_SIZE"))))
-        except:
+        except Exception:
             return maxSize
 
     async def download(self, url: str) -> ty.BinaryIO:

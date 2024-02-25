@@ -1,12 +1,11 @@
 import datetime as dt
-import typing as ty
 from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .model_base import ModelBase
+from ._model_base import ModelBase
 
 
 class GuildTask(ModelBase):

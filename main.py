@@ -16,13 +16,15 @@ from src import discordBot, models
 
 
 async def main() -> None:
+    """Entrypoint of the bot."""
+
     # Initialization
     Path("./volume/logs").mkdir(parents=True, exist_ok=True)
     Path("./volume/gallery-dl").mkdir(parents=True, exist_ok=True)
     if not Path("./volume/gallery-dl/config.json").is_file():
         try:
             shutil.copy2("./assets/gallery-dl/config.json", "./volume/gallery-dl")
-        except:
+        except Exception:
             pass
 
     # Logger
@@ -43,27 +45,26 @@ async def main() -> None:
 
     # Load .env and basic sanity checking
     load_dotenv(dotenv_path="./.env")
-    for env in ["DISCORD_TOKEN", "PREFIX", "DATABASE_CONNECTION_STRING"]:
+    for env in ["DISCORD_TOKEN", "PREFIX"]:
         if not os.getenv(env):
             errMsg = f"{env} is not set in both .env and the OS environment. Exiting..."
             logger.error(errMsg)
             raise Exception(errMsg)
 
     # Database initialization
-    engine = create_async_engine(os.getenv("DATABASE_CONNECTION_STRING"), echo=True)
+    engine = create_async_engine("sqlite+aiosqlite:///volume/db.sqlite3", echo=True)
 
     @event.listens_for(engine.sync_engine, "connect")
     def set_sqlite_pragma(
         dbapi_connection: DBAPIConnection, connection_record: ConnectionPoolEntry
     ) -> None:
         """If using SQLite, enable foreign key constraints."""
-        if os.getenv("DATABASE_CONNECTION_STRING").startswith(r"sqlite+aiosqlite://"):
-            cursor = dbapi_connection.cursor()
-            cursor.execute("PRAGMA foreign_keys=ON")
-            cursor.close()
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
     async with engine.begin() as conn:
-        await conn.run_sync(models.model_base.ModelBase.metadata.create_all)
+        await conn.run_sync(models._model_base.ModelBase.metadata.create_all)
     async_session = async_sessionmaker(engine, expire_on_commit=False)
 
     intents = discord.Intents.default()

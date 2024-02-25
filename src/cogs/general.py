@@ -1,15 +1,16 @@
-import asyncio
 import logging
 import re
+import sys
 import typing as ty
 from pathlib import Path
 
 import aiohttp
 import discord
 from discord.ext import commands
+from gallery_dl import config, job
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from .cog_base import CogBase, check_cooldown
+from ._cog_base import CogBase, check_cooldown
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 class General(CogBase):
     def __init__(
         self, bot: commands.Bot, sessionmaker: async_sessionmaker[AsyncSession]
-    ):
+    ) -> None:
         super().__init__(bot, sessionmaker)
 
     @discord.app_commands.command()
@@ -37,14 +38,19 @@ class General(CogBase):
     @discord.app_commands.describe(
         pixiv_link="Pixiv image link",
         image_number="Image number (for albums with multiple images); 1 by default",
+        animation_format="Format for animations. GIF can loop, but might fail due to large size",
     )
     async def pixiv(
         self,
         ia: discord.Interaction,
         pixiv_link: str,
         image_number: int = 1,
+        animation_format: ty.Literal["webm", "gif"] = "webm",
     ) -> None:
-        """(RATE LIMITED) Show the <image_number>th picture (or video) of [pixiv_link]."""
+        """(RATE LIMITED) Upload an image from Pixiv. You may change the image number and/or animation format."""
+
+        # TODO: Rewrite based on Phixiv
+        # https://github.com/thelaao/phixiv
 
         match = re.compile(r"(www\.pixiv\.net\/(?:en\/)?artworks\/\d+)").search(
             pixiv_link
@@ -53,36 +59,52 @@ class General(CogBase):
             await ia.response.send_message("You link is invalid!")
             return
 
-        link = match.group(1)
-
         # Delay response, maximum 15 mins
         await ia.response.defer()
 
-        # Both Discord and Gallery-DL use MiB
-        command = f"gallery-dl {link} --range {int(image_number)} --ugoira-conv --filesize-max {self.get_max_file_size(ia.guild.premium_subscription_count)}M"
-
-        proc = await asyncio.create_subprocess_shell(
-            command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        # Load Gallery-DL config and set maximum file size
+        config.load(("./volume/gallery-dl/config.json",))
+        config.set(
+            ("downloader",),
+            "filesize-max",
+            f"{self.get_max_file_size(ia.guild.premium_subscription_count)}M",
+        )
+        config.set(
+            ("extractor",),
+            "image-range",
+            str(image_number),
+        )
+        config.set(
+            ("extractor", "pixiv"),
+            "image-range",
+            str(image_number),
+        )
+        config.set(
+            ("extractor",),
+            "postprocessors",
+            [
+                {
+                    "name": "ugoira",
+                    "whitelist": ["pixiv"],
+                    "extension": animation_format,
+                    "ffmpeg-demuxer": "image2" if sys.platform == "linux" else "auto",
+                }
+            ],
         )
 
-        stdout, stderr = await proc.communicate()
+        download = job.DownloadJob(match.group(1))
+        download.run()
 
-        if proc.returncode != 0:
-            if match := re.compile(
-                r"File size larger than allowed maximum \((\d+) > (\d+)\)"
-            ).search(stderr.decode()):
-                toMebibyte = lambda x: f"{int(x) / 1024 / 1024 :.2f}"
+        if download.status == 0:
+            link = Path(download.pathfmt.path)
+
+            if not link.is_file():
                 await ia.followup.send(
-                    f"Your image is too big! (Maximum size allowed: {toMebibyte(match.group(2))} MiB, your image is {toMebibyte(match.group(1))} MiB)"
+                    f"Something went wrong.{' Maybe your image_number is out of range?' if image_number > 1 else ''}"
                 )
-            else:
-                await ia.followup.send(f"Something went wrong: \n{stderr.decode()}")
-        else:
-            link = Path(
-                f'./gallery-dl/{re.compile(r"pixiv.*").search(stdout.decode()).group()}'
-            )
+                return
 
-            embed = discord.Embed(title="Pixiv Image").add_field(
+            embed = discord.Embed().add_field(
                 name="Source", value=pixiv_link, inline=False
             )
             await ia.followup.send(
@@ -90,6 +112,31 @@ class General(CogBase):
                 file=discord.File(link),
             )
             link.unlink()
+
+        else:
+            match download.status:
+                case 4:
+                    # HttpError: Most probably because the image is too big
+                    await ia.followup.send(
+                        f"Download failed. Most probably because your image is too big. (Maximum size: {self.get_max_file_size(ia.guild.premium_subscription_count)}MiB)"
+                    )
+                    return
+                case 8:
+                    # NotFoundError: Invalid link
+                    await ia.followup.send("You link is invalid!")
+                    return
+                case 16:
+                    # AuthenticationError: No token provided
+                    await ia.followup.send(
+                        "Cannot login to Pixiv. Please notify the bot owner! \nBot owner: Please find instructions in https://github.com/regunakyle/my-discord-bot#pixiv-pixiv_link-image_number."
+                    )
+                    return
+                case _:
+                    logger.error(f"Gallery-DL failed. Status code: {download.status}")
+                    await ia.followup.send(
+                        "Something went wrong. Please notify the bot owner if this persists."
+                    )
+                    return
 
     @discord.app_commands.command()
     @discord.app_commands.checks.dynamic_cooldown(check_cooldown)

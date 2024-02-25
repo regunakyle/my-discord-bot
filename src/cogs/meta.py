@@ -5,11 +5,11 @@ from pathlib import Path
 
 import discord
 from discord.ext import commands
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from .. import models
-from .cog_base import CogBase
+from ._cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
@@ -17,60 +17,50 @@ logger = logging.getLogger(__name__)
 class Meta(CogBase):
     def __init__(
         self, bot: commands.Bot, sessionmaker: async_sessionmaker[AsyncSession]
-    ):
+    ) -> None:
         super().__init__(bot, sessionmaker)
 
-    @commands.command()
+    @commands.hybrid_command()
     async def sync(
         self,
         ctx: commands.Context,
-        guilds: commands.Greedy[discord.Object],
-        spec: ty.Optional[ty.Literal["~", "*", "^"]] = None,
     ) -> None:
-        """Reload application commands (i.e. slash commands).
-        Only the owner of the bot may use this command.
-        Please use this once after every update!
+        """(OWNER ONLY) Reload slash commands and sync guild info in database.
+
+        Please run this once after every update!
         """
-        logger.info(f"sync {spec+' ' if spec else ''}invoked.")
+        logger.info("Syncing commands and guilds...")
 
         if not await self.bot.is_owner(ctx.author):
             await ctx.send("Only the bot owner may use this command!")
             return
 
-        if not guilds:
-            if spec == "~":
-                # sync current guild, for guild specific commands
-                synced = await self.bot.tree.sync(guild=ctx.guild)
-            elif spec == "*":
-                # copies all global app commands to current guild and syncs
-                self.bot.tree.copy_global_to(guild=ctx.guild)
-                synced = await self.bot.tree.sync(guild=ctx.guild)
-            elif spec == "^":
-                # clears all commands from the current guild target and syncs
-                # (removes guild commands)
-                self.bot.tree.clear_commands(guild=ctx.guild)
-                await self.bot.tree.sync(guild=ctx.guild)
-                synced = []
-            else:
-                # global sync
-                synced = await self.bot.tree.sync()
+        synced = await self.bot.tree.sync()
 
-            await ctx.send(
-                f"Synced {len(synced)} commands {'globally' if spec is None else 'to the current guild.'}"
+        await ctx.send(f"Synced {len(synced)} commands globally.")
+
+        # Sync database with joined guilds
+        async with self.sessionmaker() as session:
+            await session.execute(
+                delete(models.GuildInfo).where(
+                    ~models.GuildInfo.guild_id.in_(
+                        [guild.id for guild in self.bot.guilds]
+                    )
+                )
             )
-            return
 
-        # <prefix>sync id_1 id_2 -> syncs guilds with id 1 and 2
-        ret = 0
-        for guild in guilds:
-            try:
-                await self.bot.tree.sync(guild=guild)
-            except discord.HTTPException:
-                pass
-            else:
-                ret += 1
+            # TODO: Optimize
+            for guild in self.bot.guilds:
+                try:
+                    await session.execute(
+                        insert(models.GuildInfo).values(
+                            guild_id=guild.id, guild_name=guild.name
+                        )
+                    )
+                except Exception:
+                    pass
 
-        await ctx.send(f"Synced the tree to {ret}/{len(guilds)}.")
+            await session.commit()
 
     @discord.app_commands.command()
     @discord.app_commands.describe(
@@ -104,7 +94,7 @@ class Meta(CogBase):
             await ia.response.send_message(embed=discord.Embed.from_dict(embedDict))
         else:
             command = self.bot.tree.get_command(command_name)
-            if command == None:
+            if command is None:
                 await ia.response.send_message(f"Command '{command_name}' not found.")
                 return
             embedDict = {
@@ -144,20 +134,12 @@ class Meta(CogBase):
                     .values(bot_channel=None)
                 )
             ).rowcount == 0:
-                if (
-                    await session.execute(
-                        update(models.GuildInfo)
-                        .where(models.GuildInfo.guild_id == ia.guild.id)
-                        .values(bot_channel=ia.channel.id)
-                    )
-                ).rowcount == 0:
-                    session.add(
-                        models.GuildInfo(
-                            guild_id=ia.guild.id,
-                            guild_name=ia.guild.name,
-                            bot_channel=ia.channel.id,
-                        )
-                    )
+                await session.execute(
+                    update(models.GuildInfo)
+                    .where(models.GuildInfo.guild_id == ia.guild.id)
+                    .values(bot_channel=ia.channel.id)
+                )
+
                 resp = f"Bot channel set to <#{ia.channel.id}>."
             await session.commit()
         await ia.response.send_message(resp)
@@ -222,20 +204,11 @@ class Meta(CogBase):
                 unescaped_msg = message.encode("latin-1", "backslashreplace").decode(
                     "unicode-escape"
                 )
-                if (
-                    await session.execute(
-                        update(models.GuildInfo)
-                        .where(models.GuildInfo.guild_id == ia.guild.id)
-                        .values(welcome_message=unescaped_msg)
-                    )
-                ).rowcount == 0:
-                    session.add(
-                        models.GuildInfo(
-                            guild_id=ia.guild.id,
-                            guild_name=ia.guild.name,
-                            welcome_message=unescaped_msg,
-                        )
-                    )
+                await session.execute(
+                    update(models.GuildInfo)
+                    .where(models.GuildInfo.guild_id == ia.guild.id)
+                    .values(welcome_message=unescaped_msg)
+                )
                 resp = (
                     f"Welcome message set. Example:\n<@{ia.user.id}>\n{unescaped_msg}"
                 )
@@ -295,5 +268,5 @@ class Meta(CogBase):
             for channel in channels:
                 try:
                     await self.bot.get_channel(channel).send(message)
-                except:
+                except Exception:
                     pass
