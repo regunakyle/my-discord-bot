@@ -33,14 +33,18 @@ If you prefer Docker, you can use the docker compose file [here](docker-compose.
 - [ ] Bot commands:
   - [ ] General.chat
   - [ ] Music.play: Add Spotify support
+- [ ] Docker support iGPU for FFMPEG
+- [ ] Change primary key of models to BigInteger
 
 ## Notable commands
 
 Parameters in `[square brackets]` are mandatory; Those in `<angled brackets>` are optional.
 
+Please use `/help` to see the full list of commands!
+
 ### `>>sync`
 
-- Reload application commands (i.e. slash commands).
+- Reload application commands (i.e. slash commands) and syncing database.
 
   Only the owner of the bot may use this command.
 
@@ -52,6 +56,27 @@ Parameters in `[square brackets]` are mandatory; Those in `<angled brackets>` ar
 
 - Display all available commands
   - `<command_name>`: Display the information of the command
+
+### `/pixiv [pixiv_link] <image_number> <animation_format>`
+
+- Post the `<image_number>`th picture (or video) of `[pixiv_link]`.
+  - `[pixiv_link]`: Pixiv image link
+  - `<image_number>`: Image number (for albums with multiple images); 1 by default
+  - `<animation_format>`: `webm` or `gif`. GIF can loop, but might fail to deliver due to much larger size; `webm` by default
+
+     **`gif` will have bad quality if the bot is not run in Linux!**
+
+#### **Important**: You must have `ffmepg` installed and setup an OAuth token to use this command
+
+  To set the OAuth token, run `gallery-dl oauth:pixiv`, then follow the instructions given.
+
+- **If you are using Docker**, `ffmpeg` has already been installed for you.
+
+    Start the discord bot container, then run in console:
+
+    1. `docker exec -it <container-name-or-id> /bin/bash`
+    2. `gallery-dl oauth:pixiv -o browser=`
+    3. Follow the instructions given
 
 ### `/set_bot_channel`
 
@@ -68,23 +93,6 @@ Parameters in `[square brackets]` are mandatory; Those in `<angled brackets>` ar
   - `<message>`: You can use `\n`, `<#ChannelNumber>`, `<@UserID>`, `<a:EmojiName:EmojiID>`.
 
     If empty, unset the welcome message
-
-### `/pixiv [pixiv_link] <image_number>`
-
-- Post the `<image_number>`th picture (or video) of `[pixiv_link]`.
-  - `[pixiv_link]`: Pixiv image link
-  - `<image_number>`: Image number (for albums with multiple images), by default 1
-- **Important**: To use this command, first install `ffmepg`,
-
-  then run (in your python environment): `gallery-dl oauth:pixiv`, and follow the instructions given.
-
-  - If you are using Docker, `ffmpeg` has already been installed for you.
-
-    Start the discord bot container, then run in console:
-
-    1. `docker exec -it <container-name-or-id> /bin/bash`
-    2. `gallery-dl oauth:pixiv -o browser=`
-    3. Follow the instructions given
 
 ### `/connect_music`
 

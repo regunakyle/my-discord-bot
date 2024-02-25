@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from .cog_base import CogBase
+from ._cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
@@ -16,15 +16,17 @@ class ErrorHandler(CogBase):
 
     def __init__(
         self, bot: commands.Bot, sessionmaker: async_sessionmaker[AsyncSession]
-    ):
+    ) -> None:
         super().__init__(bot, sessionmaker)
         self.bot.tree.on_error = self.on_app_command_error
 
     async def on_app_command_error(
         self, ia: discord.Interaction, e: discord.app_commands.AppCommandError
     ) -> None:
+        """Called when uncaught exceptions in other commands are raised."""
+
         logger.error(e)
-        error = {"content": None}
+        error: ty.Dict[str, ty.Any] = {"content": None}
 
         if isinstance(e, discord.app_commands.MissingPermissions):
             error["content"] = "You don't have the required permission!"
@@ -32,6 +34,12 @@ class ErrorHandler(CogBase):
             error["content"] = "This command is only available inside a server!"
         elif isinstance(e, discord.app_commands.CommandOnCooldown):
             error["content"] = "This command is on cooldown!"
+        elif isinstance(
+            e, discord.app_commands.CommandInvokeError
+        ) and "error code: 40005" in str(e):
+            error[
+                "content"
+            ] = f"I tried to upload a huge file and was rejected by Discord! (Maximum size: {self.get_max_file_size(ia.guild.premium_subscription_count)}MiB)"
         else:
             error["content"] = "Oh no! Something unexpected happened!"
             error["file"] = discord.File(Path("./assets/images/error.jpg"))

@@ -1,26 +1,26 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.11 AS compile-image
+FROM python:3.12 AS compile-image
 
 WORKDIR /app
 
 COPY init.sh requirements.txt ./
 
-USER root
 RUN chmod u+x ./init.sh && ./init.sh
 
-FROM python:3.11-slim AS build-image
+FROM python:3.12-slim AS build-image
 COPY --from=compile-image /opt/venv /opt/venv
 COPY --from=compile-image /bin/ffmpeg /bin/ffmpeg
 
-# Override system Python with one in venv
-ENV PATH=/opt/venv/bin:$PATH
+# Override system Python with the one in venv
+ENV PATH=/opt/venv/bin:$PATH \
+    XDG_CONFIG_HOME=/app/volume
 
 WORKDIR /app
 
 COPY . .
 
-RUN useradd nonroot && mkdir gallery-dl && chmod -R 777 gallery-dl
+RUN useradd nonroot && mkdir gallery-dl && chmod -R 777 ./
 
 USER nonroot
 

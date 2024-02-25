@@ -1,6 +1,4 @@
 import logging
-import os
-import typing as ty
 from inspect import getmembers, isclass
 
 import discord
@@ -33,22 +31,17 @@ class discordBot(commands.Bot):
         self.sessionmaker = sessionmaker
 
     async def setup_hook(self) -> None:
+        """To perform asynchronous setup after the bot is logged in but before it has connected to the Websocket."""
+
         logger.info(f"Logged in as {self.user.name} ({str(self.user.id)}).")
 
         # Add all cogs
         for module in getmembers(cogs, isclass):
             await self.add_cog(module[1](self, self.sessionmaker))
 
-        async with self.sessionmaker() as session:
-            # Delete removed guilds
-            await session.execute(
-                delete(models.GuildInfo).where(
-                    ~models.GuildInfo.guild_id.in_([guild.id for guild in self.guilds])
-                )
-            )
-            await session.commit()
-
     async def on_guild_join(self, guild: discord.Guild) -> None:
+        """Called when a Guild is either created by the Client or when the Client joins a guild."""
+
         logger.info(
             f"Joined a new guild. Guild ID: {guild.id}; Guild Name: {guild.name}"
         )
@@ -72,6 +65,8 @@ class discordBot(commands.Bot):
             )
 
     async def on_guild_remove(self, guild: discord.Guild) -> None:
+        """Called when a Guild is removed from the Client."""
+
         logger.info(f"Left a guild. Guild ID: {guild.id}; Guild Name: {guild.name}")
         async with self.sessionmaker() as session:
             # Delete removed guild from database
@@ -81,6 +76,8 @@ class discordBot(commands.Bot):
             await session.commit()
 
     async def on_member_join(self, member: discord.member) -> None:
+        """Called when a Member joins a Guild."""
+
         channel = member.guild.system_channel
         async with self.sessionmaker() as session:
             guild: models.GuildInfo | None = (

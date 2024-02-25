@@ -1,11 +1,10 @@
 import datetime as dt
-import typing as ty
 from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
-from .model_base import ModelBase
+from ._model_base import ModelBase
 
 
 class SteamBlacklist(ModelBase):

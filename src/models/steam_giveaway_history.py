@@ -1,11 +1,10 @@
 import datetime as dt
-import typing as ty
 from uuid import UUID, uuid4
 
 from sqlalchemy import Date, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .model_base import ModelBase
+from ._model_base import ModelBase
 
 
 class SteamGiveawayHistory(ModelBase):
@@ -15,4 +14,4 @@ class SteamGiveawayHistory(ModelBase):
     title: Mapped[str] = mapped_column(String(100))
     link: Mapped[str] = mapped_column(String(300))
     publish_time: Mapped[dt.datetime]
-    expiry_date: Mapped[ty.Optional[dt.datetime]] = mapped_column(Date, default=None)
+    expiry_date: Mapped[dt.datetime | None] = mapped_column(Date, default=None)
