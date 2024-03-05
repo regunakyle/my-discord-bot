@@ -149,7 +149,7 @@ cython_debug/
 
 # Docker Extras
 Dockerfile
-docker-compose.yaml
+compose.yaml
 poetry.lock
 pyproject.toml
 .git
