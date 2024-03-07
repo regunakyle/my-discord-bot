@@ -6,7 +6,8 @@ WORKDIR /app
 
 COPY init.sh requirements.txt ./
 
-RUN chmod u+x ./init.sh && ./init.sh
+RUN chmod u+x ./init.sh && \ 
+./init.sh
 
 FROM python:3.12-slim AS build-image
 COPY --from=compile-image /opt/venv /opt/venv
@@ -20,7 +21,9 @@ WORKDIR /app
 
 COPY . .
 
-RUN useradd nonroot && mkdir gallery-dl && chmod -R 777 ./
+RUN useradd nonroot && \ 
+mkdir gallery-dl && \ 
+chmod -R 777 ./
 
 USER nonroot
 
