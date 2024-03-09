@@ -2,6 +2,9 @@ name: Build Docker image and push to Dockerhub
 
 on:
   push:
+    branches:
+      - main
+      - dev
 
 jobs:
   docker:
