@@ -23,7 +23,6 @@ ruff = "*"
 
 [tool.mypy]
 strict = true
-strict_optional = false
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

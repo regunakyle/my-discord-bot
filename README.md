@@ -22,6 +22,8 @@ Data are stored in an embedded SQLite3 database file.
 
 If you prefer Docker, you can use the Docker Compose file [here](compose.yaml).
 
+Note: The `latest` tag refers to the latest stable version.
+
 ## Features
 
 1. Notify you when there are free game giveaways
