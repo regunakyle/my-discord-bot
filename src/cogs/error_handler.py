@@ -37,9 +37,11 @@ class ErrorHandler(CogBase):
         elif isinstance(
             e, discord.app_commands.CommandInvokeError
         ) and "error code: 40005" in str(e):
-            error[
-                "content"
-            ] = f"I tried to upload a huge file and was rejected by Discord! (Maximum size: {self.get_max_file_size(ia.guild.premium_subscription_count)}MiB)"
+            error["content"] = (
+                "I tried to upload a huge file and was rejected by Discord! (Maximum size: {size}MiB)".format(
+                    size=self.get_max_file_size(ia.guild.premium_subscription_count)
+                )
+            )
         else:
             error["content"] = "Oh no! Something unexpected happened!"
             error["file"] = discord.File(Path("./assets/images/error.jpg"))

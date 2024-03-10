@@ -47,12 +47,12 @@ class CogBase(commands.Cog):
         except Exception:
             return maxSize
 
-    async def download(self, url: str) -> ty.BinaryIO:
+    async def download(self, url: str) -> tempfile.SpooledTemporaryFile:
         """Download the content of <url> to <file> and return <file>.
 
         Note: NOT compatible with discord.File."""
         # TODO: Fix compatibility issue with discord.File
-        file = tempfile.TemporaryFile()
+        file = tempfile.SpooledTemporaryFile()
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 while True:
