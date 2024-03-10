@@ -212,7 +212,10 @@ class Steam(CogBase):
 
             if not (botChannel := self.bot.get_channel(guild_task.bot_channel)):
                 logger.warning(
-                    f"This guild (id: {guild_task.id}, name: {guild_task.guild_info.guild_name}) has not yet set a bot channel!"
+                    "This guild (id: {task_id}, name: {guild_name}) has not yet set a bot channel!".format(
+                        task_id=guild_task.id,
+                        guild_name=guild_task.guild_info.guild_name,
+                    )
                 )
                 continue
 

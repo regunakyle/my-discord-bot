@@ -58,7 +58,7 @@ class discordBot(commands.Bot):
                 )
                 await session.commit()
             except Exception as e:
-                print("Error adding guild to database:", e)
+                logger.error("Error adding guild to database:", e)
         if guild.system_channel:
             await guild.system_channel.send(
                 "Hi everyone! Type `/help` to see all my available commands!"
@@ -96,3 +96,22 @@ class discordBot(commands.Bot):
             except Exception as e:
                 # TODO: Delete the welcome message if the message is malformed
                 logger.error(e)
+
+    async def on_app_command_completion(
+        self,
+        ia: discord.Interaction,
+        command: discord.app_commands.Command | discord.app_commands.ContextMenu,
+    ):
+        # Log all app command calls
+        template = """User {user}({userid}) in guild {guild}({guildid}) invoked the command:
+{command}"""
+
+        logging.info(
+            template.format(
+                user=ia.user.name,
+                userid=ia.user.id,
+                guild=ia.guild.name,
+                guildid=ia.guild.id,
+                command=ia.data,
+            )
+        )

@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   discordbot:
     container_name: discordbot
@@ -20,10 +18,14 @@ services:
 
   lavalink:
     container_name: lavalink
-    image: fredboat/lavalink:3.7
+    # Using fix-yt-400 until Lavalink fix the 400 issue
+    # https://github.com/lavalink-devs/lavaplayer/issues/69
+    image: ghcr.io/lavalink-devs/lavalink:fix-yt-400
     environment:
       server.port: 2333
       lavalink.server.password: youshallnotpass
+    ports:
+      - 2333:2333
     restart: unless-stopped
 
 volumes:

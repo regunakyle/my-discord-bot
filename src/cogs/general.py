@@ -118,7 +118,11 @@ class General(CogBase):
                 case 4:
                     # HttpError: Most probably because the image is too big
                     await ia.followup.send(
-                        f"Download failed. Most probably because your image is too big. (Maximum size: {self.get_max_file_size(ia.guild.premium_subscription_count)}MiB)"
+                        "Download failed. Most probably because your image is too big. (Maximum size: {size}MiB)".format(
+                            size=self.get_max_file_size(
+                                ia.guild.premium_subscription_count
+                            )
+                        )
                     )
                     return
                 case 8:

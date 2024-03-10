@@ -15,20 +15,22 @@ from ._cog_base import CogBase
 logger = logging.getLogger(__name__)
 
 # TODO: Refactor
-# TODO: Periodically check the count of non-bot members in the same voice channel, quit if it's 0
 
 
 def check_node_exist(func: ty.Callable) -> ty.Callable:
     """Check for connected node. If not found, send error message."""
 
     @wraps(func)
-    async def _wrapper(*args: ty.List[ty.Any], **kwargs: ty.Dict[str, ty.Any]) -> None:
+    async def _wrapper(
+        *args: ty.List["Music | discord.Interaction"], **kwargs: ty.Dict[str, ty.Any]
+    ) -> None:
         """args[0] is self, args[1] is an discord.Interaction object"""
+        interaction: discord.Interaction = args[1]
 
         try:
-            wavelink.NodePool.get_connected_node()
-        except wavelink.InvalidNode:
-            await args[1].response.send_message(
+            wavelink.Pool.get_node()
+        except wavelink.InvalidNodeException:
+            await interaction.response.send_message(
                 "Music playing server is offline! Please notify the bot owner of the issue!"
             )
             return
@@ -45,6 +47,7 @@ class Music(CogBase):
         super().__init__(bot, sessionmaker)
         self.reconnect_count = 0
         self.check_node_connection_task.start()
+        self.leave_inactive_voice_channel_task.start()
 
     ######################################
     # UTILITIES
@@ -54,17 +57,19 @@ class Music(CogBase):
         await self.bot.wait_until_ready()
         logger.info("Attempting to connect to a node...")
         try:
-            return await wavelink.NodePool.connect(
+            node = await wavelink.Pool.connect(
                 client=self.bot,
                 nodes=[
                     wavelink.Node(
-                        uri=f'{os.getenv("LAVALINK_IP")}:{os.getenv("LAVALINK_PORT")}',
+                        uri=f'http://{os.getenv("LAVALINK_IP")}:{os.getenv("LAVALINK_PORT")}',
                         password=os.getenv("LAVALINK_PASSWORD", ""),
-                        # use_http=True,
                         retries=3,
                     )
                 ],
             )
+            self.reconnect_count = 0
+            return node
+
         except aiohttp.ClientConnectionError:
             return {}
 
@@ -72,11 +77,30 @@ class Music(CogBase):
     async def check_node_connection_task(self) -> None:
         """Discord task: Try to connect to a Lavalink node unless exceeded maximum retries."""
         try:
-            wavelink.NodePool.get_connected_node()
-        except wavelink.InvalidNode:
+            wavelink.Pool.get_node()
+        except wavelink.InvalidNodeException:
             if self.reconnect_count < 5:
                 self.reconnect_count += 1
                 await self.connect_node()
+
+    @tasks.loop(minutes=1)
+    async def leave_inactive_voice_channel_task(self) -> None:
+        """Discord task: Quit if there is no non-bot user in the same voice channel."""
+        # Alternative: discord.on_voice_state_update()
+
+        for vc in self.bot.voice_clients:
+            # Should be safe to assume this as all voice activity is handled by Wavelink
+            vc: wavelink.Player
+            alone = True
+
+            for member in vc.channel.members:
+                if not member.bot:
+                    alone = False
+                    break
+
+            if alone:
+                await vc.channel.send("Quitting because I am alone...")
+                await vc.disconnect()
 
     async def check_user_bot_same_channel(self, ia: discord.Interaction) -> bool:
         """Return True if the user is in the same channel as the bot."""
@@ -84,8 +108,9 @@ class Music(CogBase):
             self.bot.voice_clients, guild=ia.guild
         )
         if vc:
+            channel: discord.VoiceChannel | discord.StageChannel = vc.channel
             try:
-                return vc.channel.id == ia.user.voice.channel.id
+                return channel.id == ia.user.voice.channel.id
             except Exception:
                 return False
         else:
@@ -98,48 +123,57 @@ class Music(CogBase):
     # EVENT LISTENERS
 
     @commands.Cog.listener()
-    async def on_wavelink_node_ready(self, node: wavelink.Node) -> None:
+    async def on_wavelink_node_ready(
+        self, payload: wavelink.NodeReadyEventPayload
+    ) -> None:
         """Event fired when a node has finished connecting."""
-        logger.info(f"Node: <{node.id}> is ready!")
+        logger.info(f"Node: <{payload.node.identifier}> is ready!")
 
     @commands.Cog.listener()
     async def on_wavelink_track_start(
-        self, payload: wavelink.TrackEventPayload
+        self, payload: wavelink.TrackStartEventPayload
     ) -> None:
         """Event fired after a node started playing a song."""
         # If no other non-bot user presents, quit and clear queue
         for member in payload.player.channel.members:
             if not member.bot:
                 await payload.player.channel.send(
-                    f"Now playing *{payload.track.title}*{' (looping)' if payload.player.queue.loop else ''}!",
+                    "Now playing *{title}*{looping}!".format(
+                        title=payload.track.title,
+                        looping=" (looping)"
+                        if payload.player.queue.mode != wavelink.QueueMode.normal
+                        else "",
+                    ),
                     delete_after=30,
                 )
                 return
 
-        payload.player.queue.reset()
         await payload.player.channel.send("Quitting because I am alone...")
         await payload.player.disconnect()
         return
 
     @commands.Cog.listener()
-    async def on_wavelink_track_end(self, payload: wavelink.TrackEventPayload) -> None:
+    async def on_wavelink_track_end(
+        self, payload: wavelink.TrackEndEventPayload
+    ) -> None:
         """Event fired when a node has finished playing a song."""
         if payload.reason.upper() in ("FINISHED", "STOPPED"):
             try:
                 track = payload.player.queue.get()
             except wavelink.QueueEmpty:
-                payload.player.queue.reset()
                 await payload.player.channel.send(
                     "All songs played. Leaving the voice channel..."
                 )
                 await payload.player.disconnect()
+                return
+            except AttributeError:
+                # Most probably because of leave_inactive_voice_channel_task() or quit()
                 return
 
             await asyncio.sleep(1)
             await payload.player.play(track)
         else:
             logger.error(f"Music playing stopped. Reason: {payload.reason.upper()}")
-            payload.player.queue.reset()
             await payload.player.channel.send(
                 "Something went wrong. I will be quitting now..."
             )
@@ -179,36 +213,37 @@ class Music(CogBase):
         # Delay response, maximum 15 mins
         await ia.response.defer()
 
-        tracks: ty.List[wavelink.Playable] = await wavelink.YouTubeTrack.search(
-            youtube_url
-        )
-
-        if not tracks:
+        try:
+            tracks: ty.List[wavelink.Playable] = await wavelink.Playable.search(
+                youtube_url
+            )
+        except wavelink.LavalinkLoadException:
             await ia.followup.send("Your link is invalid!")
             return
 
-        if isinstance(tracks, wavelink.YouTubePlaylist):
-            tracks = [
-                tracks.tracks[
-                    tracks.selected_track if tracks.selected_track >= 0 else 0
-                ]
-            ]
+        if isinstance(tracks, wavelink.Playlist):
+            # Convert wavelink.Playlist to ty.List[wavelink.Playable]
+            tracks = [tracks.tracks[tracks.selected if tracks.selected >= 0 else 0]]
 
         vc: wavelink.Player = (
             ia.guild.voice_client
             or await ia.user.voice.channel.connect(cls=wavelink.Player)
         )
 
-        await vc.queue.put_wait(tracks[0])
+        track = tracks[0]
+        # Add requester name to track, so that the `queue` command can show it
+        track.extras = {"requester": ia.user.name}
+
+        await vc.queue.put_wait(track)
         await ia.followup.send(
-            f"Song *{tracks[0].title}* added to queue!"
+            f"Song *{track.title}* added to queue!"
             + (
                 f"\n(Note: Currently looping *{vc.current.title}*)"
-                if vc.queue.loop
+                if vc.queue.mode != wavelink.QueueMode.normal
                 else ""
             )
         )
-        if not vc.is_playing():
+        if not vc.playing:
             await vc.play(vc.queue.get())
 
     @discord.app_commands.command()
@@ -222,7 +257,6 @@ class Music(CogBase):
         else:
             vc: wavelink.Player = ia.guild.voice_client
 
-        # TODO: Find a way to add requester into track object
         embedDict = {
             "title": f"Queue for server {ia.guild.name}",
             "description": "",
@@ -230,37 +264,60 @@ class Music(CogBase):
             "thumbnail": {"url": "attachment://music.png"},
             "fields": [
                 {
-                    "name": "Currently playing",
-                    "value": "Not playing anything :)",
-                    "inline": False,
-                },
-                {
-                    "name": "Total queue size",
-                    "value": len(vc.queue) + 1,
+                    "name": "Queue size",
+                    "value": len(vc.queue) if len(vc.queue) else "Empty",
                     "inline": True,
                 },
                 {
                     "name": "Paused",
-                    "value": vc.is_paused(),
+                    "value": vc.paused,
                     "inline": True,
                 },
                 {
                     "name": "Looping",
-                    "value": vc.queue.loop,
+                    "value": vc.queue.mode != wavelink.QueueMode.normal,
                     "inline": True,
                 },
             ],
         }
-        for index, item in enumerate(vc.queue):
+
+        for index, queue_track in enumerate(vc.queue):
             if index >= 20:
+                # TODO: Pagination
                 break
-            embedDict[
-                "description"
-            ] += f"{index+1}. ({int(item.duration / 1000 // 60)}:{int(item.duration / 1000 % 60)}) [{item.title}]({item.uri})\n"
-        if vc.is_playing():
-            embedDict["fields"][0][
-                "value"
-            ] = f"[{vc.current.title}]({vc.current.uri}) ({int(vc.current.duration / 1000 // 60)}:{int(vc.current.duration / 1000 % 60)})"
+
+            if index == 0:
+                embedDict["fields"].insert(
+                    0,
+                    {
+                        "name": "**__ON QUEUE__**",
+                        "value": "",
+                        "inline": False,
+                    },
+                )
+
+            embedDict["fields"][0]["value"] += (
+                "{index}. [{title}]({url})\n({minutes}:{seconds} - requested by {user})\n".format(
+                    index=index + 1,
+                    title=queue_track.title,
+                    url=queue_track.uri,
+                    minutes=int(vc.current.length / 1000 // 60),
+                    seconds=int(queue_track.length / 1000 % 60),
+                    user=dict(queue_track.extras)["requester"],
+                )
+            )
+
+        if vc.playing:
+            embedDict["description"] = (
+                "**__CURRENTLY PLAYING__**\n[{title}]({url})\n({minutes}:{seconds} - requested by {user})".format(
+                    title=vc.current.title,
+                    url=vc.current.uri,
+                    minutes=int(vc.current.length / 1000 // 60),
+                    seconds=int(vc.current.length / 1000 % 60),
+                    user=dict(vc.current.extras)["requester"],
+                )
+            )
+
         await ia.response.send_message(
             embed=discord.Embed.from_dict(embedDict),
             file=discord.File("./assets/images/music.png", filename="music.png"),
@@ -283,11 +340,11 @@ class Music(CogBase):
             )
             return
 
-        if vc.is_paused():
-            await vc.resume()
+        if vc.paused:
+            await vc.pause(False)
             await ia.response.send_message("Music player resumed!")
         else:
-            await vc.pause()
+            await vc.pause(True)
             await ia.response.send_message("Music player paused!")
 
     @discord.app_commands.command()
@@ -307,15 +364,15 @@ class Music(CogBase):
             )
             return
 
-        if vc.is_playing():
-            if not vc.queue.loop:
-                vc.queue.loop = True
+        if vc.playing:
+            if vc.queue.mode == wavelink.QueueMode.normal:
+                vc.queue.mode = wavelink.QueueMode.loop
                 await ia.response.send_message(
                     "Looping started. Run /loop again to cancel..."
                 )
                 return
             else:
-                vc.queue.loop = False
+                vc.queue.mode = wavelink.QueueMode.normal
                 await ia.response.send_message("Looping stopped.")
                 return
         else:
@@ -338,11 +395,15 @@ class Music(CogBase):
             )
             return
 
-        if vc.is_playing():
+        if vc.playing:
             await ia.response.send_message(
-                f"Skipping the current song. {'Looping stopped.' if vc.queue.loop else ''}"
+                "Skipping the current song. {looping}".format(
+                    looping="Looping stopped."
+                    if vc.queue.mode != wavelink.QueueMode.normal
+                    else ""
+                )
             )
-            vc.queue.loop = False
+            vc.queue.mode = wavelink.QueueMode.normal
             await vc.stop()
 
     @discord.app_commands.command()
@@ -363,7 +424,6 @@ class Music(CogBase):
             return
 
         await ia.response.send_message("Ready to leave. Goodbye!")
-        vc.queue.reset()
         await vc.disconnect()
 
     @discord.app_commands.command()
@@ -385,5 +445,6 @@ class Music(CogBase):
 
         if await self.connect_node():
             await ia.followup.send("Connection successful.")
+            return
 
         await ia.followup.send("Reconnection failed.")

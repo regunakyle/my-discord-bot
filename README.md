@@ -20,7 +20,9 @@ Data are stored in an embedded SQLite3 database file.
 
 ## Docker Compose
 
-If you prefer Docker, you can use the docker compose file [here](docker-compose.yaml).
+If you prefer Docker, you can use the Docker Compose file [here](compose.yaml).
+
+Note: The `latest` tag refers to the latest stable version.
 
 ## Features
 
@@ -50,7 +52,7 @@ Please use `/help` to see the full list of commands!
 
   **Please run this command once after first install and after every update!**
 
-  Note: Replace `>>` with the `PREFIX` you set in `.env` (or `docker-compose.yaml` if you are using Docker)
+  Note: Replace `>>` with the `PREFIX` you set in `.env` (or `compose.yaml` if you are using Docker)
 
 ### `/help <command_name>`
 
