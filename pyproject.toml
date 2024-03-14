@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "my-discord-bot"
-version = "2.3.1"
+version = "2.5.1"
 description = "Discord Bot by Reguna"
 authors = ["Reguna <60984878+regunakyle@users.noreply.github.com>"]
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.11"
 feedparser = "^6"
 gallery-dl = "^1"
 python-dotenv = "^1"

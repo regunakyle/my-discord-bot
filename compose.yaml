@@ -18,9 +18,7 @@ services:
 
   lavalink:
     container_name: lavalink
-    # Using fix-yt-400 until Lavalink fix the 400 issue
-    # https://github.com/lavalink-devs/lavaplayer/issues/69
-    image: ghcr.io/lavalink-devs/lavalink:fix-yt-400
+    image: ghcr.io/lavalink-devs/lavalink:4
     environment:
       server.port: 2333
       lavalink.server.password: youshallnotpass
