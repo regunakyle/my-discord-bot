@@ -12,8 +12,8 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from .. import models
-from ._cog_base import CogBase
+from src import models
+from src.cogs._cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +202,7 @@ class Steam(CogBase):
                 await session.execute(
                     select(models.GuildTask)
                     .options(
-                        selectinload(models.GuildTask.guild_info),
+                        selectinload(models.GuildTask.guild),
                     )
                     .where(models.GuildTask.task_name == self.taskName)
                 )
@@ -214,7 +214,7 @@ class Steam(CogBase):
                 logger.warning(
                     "This guild (id: {task_id}, name: {guild_name}) has not yet set a bot channel!".format(
                         task_id=guild_task.id,
-                        guild_name=guild_task.guild_info.guild_name,
+                        guild_name=guild_task.guild.guild_name,
                     )
                 )
                 continue

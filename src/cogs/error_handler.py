@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from ._cog_base import CogBase
+from src.cogs._cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 

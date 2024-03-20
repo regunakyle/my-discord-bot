@@ -1,20 +1,20 @@
 import datetime as dt
-from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ._model_base import ModelBase
+from src.models._model_base import ModelBase
+from src.models.guild import Guild
 
 
 class GuildTask(ModelBase):
     __tablename__ = "guild_task"
 
     # Columns
-    id: Mapped[UUID] = mapped_column(init=False, primary_key=True, default=uuid4)
+    id: Mapped[int] = mapped_column(init=False, primary_key=True, autoincrement=True)
     guild_id: Mapped[int] = mapped_column(
-        ForeignKey("guild_info.guild_id", onupdate="CASCADE", ondelete="CASCADE")
+        ForeignKey("guild.guild_id", onupdate="CASCADE", ondelete="CASCADE")
     )
     task_name: Mapped[str] = mapped_column(String(100))
     last_run: Mapped[dt.datetime] = mapped_column(
@@ -22,10 +22,10 @@ class GuildTask(ModelBase):
     )
 
     # Relationships
-    guild_info: Mapped["GuildInfo"] = relationship(
+    guild: Mapped[Guild] = relationship(
         init=False,
-        lazy="raise",
+        lazy="noload",
     )
     bot_channel: AssociationProxy[int] = association_proxy(
-        "guild_info", "bot_channel", init=False
+        "guild", "bot_channel", init=False
     )

@@ -6,7 +6,7 @@ from discord.ext import commands
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from . import cogs, models
+from src import cogs, models
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class discordBot(commands.Bot):
         async with self.sessionmaker() as session:
             try:
                 session.add(
-                    models.GuildInfo(
+                    models.Guild(
                         guild_id=guild.id,
                         guild_name=guild.name,
                         bot_channel=guild.system_channel.id
@@ -71,7 +71,7 @@ class discordBot(commands.Bot):
         async with self.sessionmaker() as session:
             # Delete removed guild from database
             await session.execute(
-                delete(models.GuildInfo).where(models.GuildInfo.guild_id == guild.id)
+                delete(models.Guild).where(models.Guild.guild_id == guild.id)
             )
             await session.commit()
 
@@ -80,11 +80,9 @@ class discordBot(commands.Bot):
 
         channel = member.guild.system_channel
         async with self.sessionmaker() as session:
-            guild: models.GuildInfo | None = (
+            guild: models.Guild | None = (
                 await session.execute(
-                    select(models.GuildInfo).where(
-                        models.GuildInfo.guild_id == member.guild.id
-                    )
+                    select(models.Guild).where(models.Guild.guild_id == member.guild.id)
                 )
             ).scalar()
             if not guild:
