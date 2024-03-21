@@ -75,10 +75,12 @@ async def main() -> None:
 
     description = "Discord bot for self use. \nWritten in Python using discord.py."
 
-    bot = discordBot(os.getenv("PREFIX"), intents, activity, description, async_session)
+    bot = discordBot(
+        os.getenv("PREFIX", ">>"), intents, activity, description, async_session
+    )
 
     logger.info("STARTING DISCORD BOT PROCESS...\n")
-    await bot.start(os.getenv("DISCORD_TOKEN"))
+    await bot.start(os.getenv("DISCORD_TOKEN", ""))
 
 
 if __name__ == "__main__":

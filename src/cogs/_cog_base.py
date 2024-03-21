@@ -29,13 +29,20 @@ class CogBase(commands.Cog):
         self.bot = bot
         self.sessionmaker = sessionmaker
 
-    def get_max_file_size(self, nitroCount: int = 0) -> int:
+    def get_max_file_size(
+        self,
+        guild: None | discord.Guild,
+    ) -> int:
         """Return the maximum file size (in MiB) supported by the current guild.
 
         If MAX_FILE_SIZE in .env is smaller than this size, return MAX_FILE_SIZE instead.
         """
 
+        if guild is None:
+            return 25
+
         # Nitro level and their maximum upload size
+        nitroCount = guild.premium_subscription_count
         maxSize = 100  # Level 3
         if nitroCount < 7:  # Level 1 or lower
             maxSize = 25
@@ -43,7 +50,7 @@ class CogBase(commands.Cog):
             maxSize = 50
 
         try:
-            return min(maxSize, abs(int(os.getenv("MAX_FILE_SIZE"))))
+            return min(maxSize, abs(int(os.getenv("MAX_FILE_SIZE", "25"))))
         except Exception:
             return maxSize
 

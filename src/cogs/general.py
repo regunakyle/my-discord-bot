@@ -67,7 +67,7 @@ class General(CogBase):
         config.set(
             ("downloader",),
             "filesize-max",
-            f"{self.get_max_file_size(ia.guild.premium_subscription_count)}M",
+            f"{self.get_max_file_size(ia.guild)}M",
         )
         config.set(
             ("extractor",),
@@ -119,9 +119,7 @@ class General(CogBase):
                     # HttpError: Most probably because the image is too big
                     await ia.followup.send(
                         "Download failed. Most probably because your image is too big. (Maximum size: {size}MiB)".format(
-                            size=self.get_max_file_size(
-                                ia.guild.premium_subscription_count
-                            )
+                            size=self.get_max_file_size(ia.guild)
                         )
                     )
                     return

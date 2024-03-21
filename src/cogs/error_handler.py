@@ -39,7 +39,7 @@ class ErrorHandler(CogBase):
         ) and "error code: 40005" in str(e):
             error["content"] = (
                 "I tried to upload a huge file and was rejected by Discord! (Maximum size: {size}MiB)".format(
-                    size=self.get_max_file_size(ia.guild.premium_subscription_count)
+                    size=self.get_max_file_size(ia.guild)
                 )
             )
         else:

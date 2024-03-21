@@ -7,6 +7,7 @@ from functools import wraps
 import aiohttp
 import discord
 import wavelink
+from discord.client import Client
 from discord.ext import commands, tasks
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -22,10 +23,11 @@ def check_node_exist(func: ty.Callable) -> ty.Callable:
 
     @wraps(func)
     async def _wrapper(
-        *args: ty.List["Music | discord.Interaction"], **kwargs: ty.Dict[str, ty.Any]
+        *args: ty.List["Music | discord.Interaction[Client]"],
+        **kwargs: ty.Dict[str, ty.Any],
     ) -> None:
         """args[0] is self, args[1] is an discord.Interaction object"""
-        interaction: discord.Interaction = args[1]
+        interaction: discord.Interaction[Client] = args[1]
 
         try:
             wavelink.Pool.get_node()
