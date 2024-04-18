@@ -75,7 +75,7 @@ class discordBot(commands.Bot):
             )
             await session.commit()
 
-    async def on_member_join(self, member: discord.member) -> None:
+    async def on_member_join(self, member: discord.Member) -> None:
         """Called when a Member joins a Guild."""
 
         channel = member.guild.system_channel

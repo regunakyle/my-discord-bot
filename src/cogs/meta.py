@@ -268,8 +268,3 @@ class Meta(CogBase):
                     await self.bot.get_channel(channel).send(message)
                 except Exception:
                     pass
-
-    @discord.app_commands.command()
-    async def version(self, ia: discord.Interaction) -> None:
-        """Print out the current version of this bot."""
-        await ia.response.send_message("NOT IMPLEMENTED")
