@@ -38,7 +38,7 @@ Note: The `latest` tag refers to the latest stable version.
   - [ ] General.chat
   - [ ] Music.play: Add Spotify support
 - [ ] Docker support iGPU for FFMPEG
-- [ ] Change primary key of models to BigInteger
+- [ ] Allow bot owner to run every command
 
 ## Notable commands
 
