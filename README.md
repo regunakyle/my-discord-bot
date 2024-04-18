@@ -28,15 +28,15 @@ Note: The `latest` tag refers to the latest stable version.
 
 ## Features
 
-1. Notify you when there are free game giveaways
-2. A music player to play Youtube videos in any voice channel
-3. A bunch of other commands I created for my needs...
+1. A music player to play Youtube videos in any voice channel
+2. A bunch of other commands I created for my needs...
 
 ## TODO List
 
 - [ ] Bot commands:
   - [ ] General.chat
   - [ ] Music.play: Add Spotify support
+  - [ ] General.pixiv: Rewrite (refer to Phixiv implementation)
 - [ ] Docker support iGPU for FFMPEG
 - [ ] Allow bot owner to run every command
 
@@ -81,14 +81,6 @@ Please use `/help` to see the full list of commands!
     1. `docker exec -it <container-name-or-id> /bin/bash`
     2. `gallery-dl oauth:pixiv -o browser=`
     3. Follow the instructions given
-
-### `/set_bot_channel`
-
-- Mark the current channel as the subscription channel.
-
-  All subscription messages will be sent in that channel.
-
-  (Currently only Steam free giveaway notification is available)
 
 ### `/set_welcome_message <message>`
 

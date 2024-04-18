@@ -12,7 +12,7 @@ from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import ConnectionPoolEntry
 
-from src import discordBot, models
+from src import DiscordBot, models
 
 
 async def main() -> None:
@@ -64,7 +64,7 @@ async def main() -> None:
         cursor.close()
 
     async with engine.begin() as conn:
-        await conn.run_sync(models._model_base.ModelBase.metadata.create_all)
+        await conn.run_sync(models.ModelBase.metadata.create_all)
     async_session = async_sessionmaker(engine, expire_on_commit=False)
 
     intents = discord.Intents.default()
@@ -75,7 +75,7 @@ async def main() -> None:
 
     description = "Discord bot for self use. \nWritten in Python using discord.py."
 
-    bot = discordBot(
+    bot = DiscordBot(
         os.getenv("PREFIX", ">>"), intents, activity, description, async_session
     )
 

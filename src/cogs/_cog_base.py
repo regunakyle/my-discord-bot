@@ -53,19 +53,3 @@ class CogBase(commands.Cog):
             return min(maxSize, abs(int(os.getenv("MAX_FILE_SIZE", "25"))))
         except Exception:
             return maxSize
-
-    async def download(self, url: str) -> tempfile.SpooledTemporaryFile:
-        """Download the content of <url> to <file> and return <file>.
-
-        Note: NOT compatible with discord.File."""
-        # TODO: Fix compatibility issue with discord.File
-        file = tempfile.SpooledTemporaryFile()
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                while True:
-                    chunk = await response.content.read(4096)
-                    if not chunk:
-                        break
-                    file.write(chunk)
-        file.seek(0)
-        return file

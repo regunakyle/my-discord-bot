@@ -11,7 +11,7 @@ from src import cogs, models
 logger = logging.getLogger(__name__)
 
 
-class discordBot(commands.Bot):
+class DiscordBot(commands.Bot):
     def __init__(
         self,
         command_prefix: str,
