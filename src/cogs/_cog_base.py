@@ -11,15 +11,19 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 logger = logging.getLogger(__name__)
 
 
-# TODO: Find a way to put this function in CogBase while being
-# compatible with the dynamic_cooldown decorator
-def check_cooldown(
-    ia: discord.Interaction,
-) -> discord.app_commands.Cooldown | None:
-    """Global cooldown for commands, maximum 1 use per 2 seconds (unlimited for the bot owner)"""
-    if ia.user.id == ia.client.application.owner.id:
-        return None
-    return discord.app_commands.Cooldown(1, 2)
+def check_cooldown_factory(
+    seconds: int = 10,
+) -> ty.Callable[[discord.Interaction], discord.app_commands.Cooldown | None]:
+    """Global cooldown for commands"""
+
+    def check_cooldown(
+        ia: discord.Interaction,
+    ) -> discord.app_commands.Cooldown | None:
+        if ia.user.id == ia.client.application.owner.id:
+            return None
+        return discord.app_commands.Cooldown(1, seconds)
+
+    return check_cooldown
 
 
 class CogBase(commands.Cog):
