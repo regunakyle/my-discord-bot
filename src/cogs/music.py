@@ -7,10 +7,11 @@ from functools import wraps
 import aiohttp
 import discord
 import wavelink
+from discord.client import Client
 from discord.ext import commands, tasks
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from ._cog_base import CogBase
+from src.cogs._cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +23,11 @@ def check_node_exist(func: ty.Callable) -> ty.Callable:
 
     @wraps(func)
     async def _wrapper(
-        *args: ty.List["Music | discord.Interaction"], **kwargs: ty.Dict[str, ty.Any]
+        *args: ty.List["Music | discord.Interaction[Client]"],
+        **kwargs: ty.Dict[str, ty.Any],
     ) -> None:
         """args[0] is self, args[1] is an discord.Interaction object"""
-        interaction: discord.Interaction = args[1]
+        interaction: discord.Interaction[Client] = args[1]
 
         try:
             wavelink.Pool.get_node()
@@ -52,26 +54,22 @@ class Music(CogBase):
     ######################################
     # UTILITIES
 
-    async def connect_node(self) -> ty.Dict[str, wavelink.Node]:
+    async def connect_node(self) -> None:
         """Connect to a Lavalink node."""
         await self.bot.wait_until_ready()
         logger.info("Attempting to connect to a node...")
-        try:
-            node = await wavelink.Pool.connect(
-                client=self.bot,
-                nodes=[
-                    wavelink.Node(
-                        uri=f'http://{os.getenv("LAVALINK_IP")}:{os.getenv("LAVALINK_PORT")}',
-                        password=os.getenv("LAVALINK_PASSWORD", ""),
-                        retries=3,
-                    )
-                ],
-            )
-            self.reconnect_count = 0
-            return node
 
-        except aiohttp.ClientConnectionError:
-            return {}
+        node = wavelink.Node(
+            uri=os.getenv("LAVALINK_URL", ""),
+            password=os.getenv("LAVALINK_PASSWORD", ""),
+            retries=3,
+        )
+        await wavelink.Pool.connect(
+            client=self.bot,
+            nodes=[node],
+        )
+        if node.status == wavelink.NodeStatus.CONNECTED:
+            self.reconnect_count = 0
 
     @tasks.loop(minutes=1)
     async def check_node_connection_task(self) -> None:

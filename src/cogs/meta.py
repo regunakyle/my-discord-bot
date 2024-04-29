@@ -8,8 +8,8 @@ from discord.ext import commands
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from .. import models
-from ._cog_base import CogBase
+from src import models
+from src.cogs._cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +42,8 @@ class Meta(CogBase):
         # Sync database with joined guilds
         async with self.sessionmaker() as session:
             await session.execute(
-                delete(models.GuildInfo).where(
-                    ~models.GuildInfo.guild_id.in_(
-                        [guild.id for guild in self.bot.guilds]
-                    )
+                delete(models.Guild).where(
+                    ~models.Guild.guild_id.in_([guild.id for guild in self.bot.guilds])
                 )
             )
 
@@ -53,7 +51,7 @@ class Meta(CogBase):
             for guild in self.bot.guilds:
                 try:
                     await session.execute(
-                        insert(models.GuildInfo).values(
+                        insert(models.Guild).values(
                             guild_id=guild.id, guild_name=guild.name
                         )
                     )
@@ -128,15 +126,15 @@ class Meta(CogBase):
         async with self.sessionmaker() as session:
             if (
                 await session.execute(
-                    update(models.GuildInfo)
-                    .where(models.GuildInfo.guild_id == ia.guild.id)
-                    .where(models.GuildInfo.bot_channel == ia.channel.id)
+                    update(models.Guild)
+                    .where(models.Guild.guild_id == ia.guild.id)
+                    .where(models.Guild.bot_channel == ia.channel.id)
                     .values(bot_channel=None)
                 )
             ).rowcount == 0:
                 await session.execute(
-                    update(models.GuildInfo)
-                    .where(models.GuildInfo.guild_id == ia.guild.id)
+                    update(models.Guild)
+                    .where(models.Guild.guild_id == ia.guild.id)
                     .values(bot_channel=ia.channel.id)
                 )
 
@@ -194,8 +192,8 @@ class Meta(CogBase):
         async with self.sessionmaker() as session:
             if not message:
                 await session.execute(
-                    update(models.GuildInfo)
-                    .where(models.GuildInfo.guild_id == ia.guild.id)
+                    update(models.Guild)
+                    .where(models.Guild.guild_id == ia.guild.id)
                     .values(welcome_message=None)
                 )
                 resp = "Welcome message cleared."
@@ -205,8 +203,8 @@ class Meta(CogBase):
                     "unicode-escape"
                 )
                 await session.execute(
-                    update(models.GuildInfo)
-                    .where(models.GuildInfo.guild_id == ia.guild.id)
+                    update(models.Guild)
+                    .where(models.Guild.guild_id == ia.guild.id)
                     .values(welcome_message=unescaped_msg)
                 )
                 resp = (
@@ -262,7 +260,7 @@ class Meta(CogBase):
 
         async with self.sessionmaker() as session:
             channels: ty.List[int] = (
-                await session.execute(select(models.GuildInfo.bot_channel))
+                await session.execute(select(models.Guild.bot_channel))
             ).scalars()
             await ia.response.send_message("Broadcasting...")
             for channel in channels:

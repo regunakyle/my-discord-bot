@@ -11,15 +11,19 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 logger = logging.getLogger(__name__)
 
 
-# TODO: Find a way to put this function in CogBase while being
-# compatible with the dynamic_cooldown decorator
-def check_cooldown(
-    ia: discord.Interaction,
-) -> discord.app_commands.Cooldown | None:
-    """Global cooldown for commands, maximum 1 use per 2 seconds (unlimited for the bot owner)"""
-    if ia.user.id == ia.client.application.owner.id:
-        return None
-    return discord.app_commands.Cooldown(1, 2)
+def check_cooldown_factory(
+    seconds: int = 10,
+) -> ty.Callable[[discord.Interaction], discord.app_commands.Cooldown | None]:
+    """Global cooldown for commands."""
+
+    def check_cooldown(
+        ia: discord.Interaction,
+    ) -> discord.app_commands.Cooldown | None:
+        if ia.user.id == ia.client.application.owner.id:
+            return None
+        return discord.app_commands.Cooldown(1, seconds)
+
+    return check_cooldown
 
 
 class CogBase(commands.Cog):
@@ -29,13 +33,20 @@ class CogBase(commands.Cog):
         self.bot = bot
         self.sessionmaker = sessionmaker
 
-    def get_max_file_size(self, nitroCount: int = 0) -> int:
+    def get_max_file_size(
+        self,
+        guild: None | discord.Guild,
+    ) -> int:
         """Return the maximum file size (in MiB) supported by the current guild.
 
         If MAX_FILE_SIZE in .env is smaller than this size, return MAX_FILE_SIZE instead.
         """
 
+        if guild is None:
+            return 25
+
         # Nitro level and their maximum upload size
+        nitroCount = guild.premium_subscription_count
         maxSize = 100  # Level 3
         if nitroCount < 7:  # Level 1 or lower
             maxSize = 25
@@ -43,22 +54,6 @@ class CogBase(commands.Cog):
             maxSize = 50
 
         try:
-            return min(maxSize, abs(int(os.getenv("MAX_FILE_SIZE"))))
+            return min(maxSize, abs(int(os.getenv("MAX_FILE_SIZE", "25"))))
         except Exception:
             return maxSize
-
-    async def download(self, url: str) -> tempfile.SpooledTemporaryFile:
-        """Download the content of <url> to <file> and return <file>.
-
-        Note: NOT compatible with discord.File."""
-        # TODO: Fix compatibility issue with discord.File
-        file = tempfile.SpooledTemporaryFile()
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                while True:
-                    chunk = await response.content.read(4096)
-                    if not chunk:
-                        break
-                    file.write(chunk)
-        file.seek(0)
-        return file

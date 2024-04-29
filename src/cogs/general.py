@@ -10,7 +10,7 @@ from discord.ext import commands
 from gallery_dl import config, job
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from ._cog_base import CogBase, check_cooldown
+from src.cogs._cog_base import CogBase, check_cooldown_factory
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class General(CogBase):
         )
 
     @discord.app_commands.command()
-    @discord.app_commands.checks.dynamic_cooldown(check_cooldown)
+    @discord.app_commands.checks.dynamic_cooldown(check_cooldown_factory(2))
     @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         pixiv_link="Pixiv image link",
@@ -67,7 +67,7 @@ class General(CogBase):
         config.set(
             ("downloader",),
             "filesize-max",
-            f"{self.get_max_file_size(ia.guild.premium_subscription_count)}M",
+            f"{self.get_max_file_size(ia.guild)}M",
         )
         config.set(
             ("extractor",),
@@ -119,9 +119,7 @@ class General(CogBase):
                     # HttpError: Most probably because the image is too big
                     await ia.followup.send(
                         "Download failed. Most probably because your image is too big. (Maximum size: {size}MiB)".format(
-                            size=self.get_max_file_size(
-                                ia.guild.premium_subscription_count
-                            )
+                            size=self.get_max_file_size(ia.guild)
                         )
                     )
                     return
@@ -143,7 +141,7 @@ class General(CogBase):
                     return
 
     @discord.app_commands.command()
-    @discord.app_commands.checks.dynamic_cooldown(check_cooldown)
+    @discord.app_commands.checks.dynamic_cooldown(check_cooldown_factory(2))
     @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         amount="Amount in <starting_currency>, ranged from 0 to 1,000,000,000",

@@ -6,6 +6,8 @@ Data are stored in an embedded SQLite3 database file.
 
 ## Deployment guide
 
+This Discord bot is developed with Python 3.11. Use the same Python version to ensure maximum compatibility.
+
 1. Download the whole source code using `git clone`.
 
 2. Rename `.env.example` to `.env` and put your Discord token inside.
@@ -18,6 +20,8 @@ Data are stored in an embedded SQLite3 database file.
 
    The config for Lavalink can be found in `.env`.
 
+6. To use the AI chat command, set `OPENAI_API_KEY` and `OPENAI_MODEL_NAME` in `.env`.
+
 ## Docker Compose
 
 If you prefer Docker, you can use the Docker Compose file [here](compose.yaml).
@@ -26,23 +30,26 @@ Note: The `latest` tag refers to the latest stable version.
 
 ## Features
 
-1. Notify you when there are free game giveaways
-2. A music player to play Youtube videos in any voice channel
+1. A music player to play Youtube videos in any voice channel (requires a Lavalink server)
+2. Chat with AI (requires a OpenAI compatible API endpoint, e.g. [text-generation-webui](https://github.com/oobabooga/text-generation-webui))
 3. A bunch of other commands I created for my needs...
 
 ## TODO List
 
 - [ ] Bot commands:
-  - [ ] General.chat
   - [ ] Music.play: Add Spotify support
+  - [ ] General.pixiv: Rewrite (refer to Phixiv implementation)
+  - [ ] AI.draw: Add [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui) support
 - [ ] Docker support iGPU for FFMPEG
-- [ ] Change primary key of models to BigInteger
+- [ ] Allow bot owner to run every command (including admin only commands)
 
 ## Notable commands
 
-Parameters in `[square brackets]` are mandatory; Those in `<angled brackets>` are optional.
+**Please use `/help` to see the full list of commands!**
 
-Please use `/help` to see the full list of commands!
+The list below only shows a subset of commands which I think need further explanation.
+
+(Parameters in `[square brackets]` are mandatory; Those in `<angled brackets>` are optional)
 
 ### `>>sync`
 
@@ -80,26 +87,20 @@ Please use `/help` to see the full list of commands!
     2. `gallery-dl oauth:pixiv -o browser=`
     3. Follow the instructions given
 
-### `/set_bot_channel`
-
-- Mark the current channel as the subscription channel.
-
-  All subscription messages will be sent in that channel.
-
-  (Currently only Steam free giveaway notification is available)
-
-### `/set_welcome_message <message>`
-
-- Set the welcome message sent to the system channel when a new member joins the current server.
-
-  - `<message>`: You can use `\n`, `<#ChannelNumber>`, `<@UserID>`, `<a:EmojiName:EmojiID>`.
-
-    If empty, unset the welcome message
-
 ### `/connect_music`
 
 - Establish a new connection to the Lavalink server.
 
   Use this command if the music player is not working while the Lavalink server is up.
 
-  Note: Do not use this command while the bot is playing music!
+  Do NOT use this command while the bot is playing music!
+
+- Lavalink can be unstable (probably because YouTube often changes their Innertube API).
+
+  If the music player consistently produce errors, go to the Lavalink discord to check if there is a hotfix version of Lavalink.
+
+### `/chat_model <model_name>`
+
+- Print the model name used by the `/chat` command.
+
+  If `model_name` is set, change the model used by the `/chat` command. (only the bot owner can do this!)

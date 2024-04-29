@@ -1,4 +1,5 @@
 import logging
+import os
 from inspect import getmembers, isclass
 
 import discord
@@ -6,12 +7,12 @@ from discord.ext import commands
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from . import cogs, models
+from src import cogs, models
 
 logger = logging.getLogger(__name__)
 
 
-class discordBot(commands.Bot):
+class DiscordBot(commands.Bot):
     def __init__(
         self,
         command_prefix: str,
@@ -37,6 +38,15 @@ class discordBot(commands.Bot):
 
         # Add all cogs
         for module in getmembers(cogs, isclass):
+            # Disable specific cogs if specific environment variables are not set
+            if module[1].__name__ == "AI" and not (
+                len(os.getenv("OPENAI_API_KEY", ""))
+                and len(os.getenv("OPENAI_MODEL_NAME", ""))
+            ):
+                continue
+            if module[1].__name__ == "Music" and not len(os.getenv("LAVALINK_URL", "")):
+                continue
+
             await self.add_cog(module[1](self, self.sessionmaker))
 
     async def on_guild_join(self, guild: discord.Guild) -> None:
@@ -48,7 +58,7 @@ class discordBot(commands.Bot):
         async with self.sessionmaker() as session:
             try:
                 session.add(
-                    models.GuildInfo(
+                    models.Guild(
                         guild_id=guild.id,
                         guild_name=guild.name,
                         bot_channel=guild.system_channel.id
@@ -71,20 +81,18 @@ class discordBot(commands.Bot):
         async with self.sessionmaker() as session:
             # Delete removed guild from database
             await session.execute(
-                delete(models.GuildInfo).where(models.GuildInfo.guild_id == guild.id)
+                delete(models.Guild).where(models.Guild.guild_id == guild.id)
             )
             await session.commit()
 
-    async def on_member_join(self, member: discord.member) -> None:
+    async def on_member_join(self, member: discord.Member) -> None:
         """Called when a Member joins a Guild."""
 
         channel = member.guild.system_channel
         async with self.sessionmaker() as session:
-            guild: models.GuildInfo | None = (
+            guild: models.Guild | None = (
                 await session.execute(
-                    select(models.GuildInfo).where(
-                        models.GuildInfo.guild_id == member.guild.id
-                    )
+                    select(models.Guild).where(models.Guild.guild_id == member.guild.id)
                 )
             ).scalar()
             if not guild:

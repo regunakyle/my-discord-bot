@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from ._cog_base import CogBase
+from src.cogs._cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +33,13 @@ class ErrorHandler(CogBase):
         elif isinstance(e, discord.app_commands.NoPrivateMessage):
             error["content"] = "This command is only available inside a server!"
         elif isinstance(e, discord.app_commands.CommandOnCooldown):
-            error["content"] = "This command is on cooldown!"
+            error["content"] = str(e) + "."
         elif isinstance(
             e, discord.app_commands.CommandInvokeError
         ) and "error code: 40005" in str(e):
             error["content"] = (
                 "I tried to upload a huge file and was rejected by Discord! (Maximum size: {size}MiB)".format(
-                    size=self.get_max_file_size(ia.guild.premium_subscription_count)
+                    size=self.get_max_file_size(ia.guild)
                 )
             )
         else:
