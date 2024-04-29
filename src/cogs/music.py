@@ -54,7 +54,7 @@ class Music(CogBase):
     ######################################
     # UTILITIES
 
-    async def connect_node(self) -> None:
+    async def connect_node(self) -> bool:
         """Connect to a Lavalink node."""
         await self.bot.wait_until_ready()
         logger.info("Attempting to connect to a node...")
@@ -64,12 +64,21 @@ class Music(CogBase):
             password=os.getenv("LAVALINK_PASSWORD", ""),
             retries=3,
         )
-        await wavelink.Pool.connect(
-            client=self.bot,
-            nodes=[node],
-        )
-        if node.status == wavelink.NodeStatus.CONNECTED:
-            self.reconnect_count = 0
+        try:
+            await wavelink.Pool.connect(
+                client=self.bot,
+                nodes=[node],
+            )
+
+            if node.status == wavelink.NodeStatus.CONNECTED:
+                self.reconnect_count = 0
+                return True
+
+            return False
+
+        except Exception as e:
+            logger.error(e)
+            return False
 
     @tasks.loop(minutes=1)
     async def check_node_connection_task(self) -> None:
