@@ -6,19 +6,26 @@ services:
       DISCORD_TOKEN: <YOUR_TOKEN_HERE>
       # Used by old style prefix commands; this bot only has the <PREFIX>sync prefix command
       PREFIX: ">>"
-      # Maximum file upload size, used by command like /pixiv
+      # Maximum file upload size (in MiB), used by command like /pixiv
       MAX_FILE_SIZE: 25
       # Lavalink parameters, used by the Music module
-      LAVALINK_IP: lavalink
-      LAVALINK_PORT: 2333
+      # The Music module will be disabled if LAVALINK_URL is empty
+      LAVALINK_URL: http://localhost:2333
       LAVALINK_PASSWORD: youshallnotpass
+      # AI related parameters
+      # The AI module will be disabled if OPENAI_API_KEY or OPENAI_MODEL_NAME is empty
+      # You can use a random string for OPENAI_API_KEY if you are using text-generation-webui
+      OPENAI_API_KEY:
+      OPENAI_MODEL_NAME: gpt-3.5-turbo
+      # Use OpenAI API endpoint if OPENAI_BASE_URL is empty
+      OPENAI_BASE_URL: http://localhost:5000/v1
     volumes:
       - dbot-vol:/app/volume
     restart: unless-stopped
 
   lavalink:
     container_name: lavalink
-    image: ghcr.io/lavalink-devs/lavalink:4
+    image: ghcr.io/lavalink-devs/lavalink:v4-update-lp
     environment:
       server.port: 2333
       lavalink.server.password: youshallnotpass

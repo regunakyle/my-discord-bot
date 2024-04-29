@@ -60,7 +60,7 @@ class Music(CogBase):
         logger.info("Attempting to connect to a node...")
 
         node = wavelink.Node(
-            uri=f'http://{os.getenv("LAVALINK_IP")}:{os.getenv("LAVALINK_PORT")}',
+            uri=os.getenv("LAVALINK_URL", ""),
             password=os.getenv("LAVALINK_PASSWORD", ""),
             retries=3,
         )

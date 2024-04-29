@@ -14,6 +14,7 @@ wavelink = "^3"
 sqlalchemy = { extras = ["asyncio"], version = "^2" }
 aiosqlite = "^0"
 aiohttp = "^3"
+openai = "^1"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "*"

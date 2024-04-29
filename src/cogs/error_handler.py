@@ -33,7 +33,7 @@ class ErrorHandler(CogBase):
         elif isinstance(e, discord.app_commands.NoPrivateMessage):
             error["content"] = "This command is only available inside a server!"
         elif isinstance(e, discord.app_commands.CommandOnCooldown):
-            error["content"] = "This command is on cooldown!"
+            error["content"] = str(e) + "."
         elif isinstance(
             e, discord.app_commands.CommandInvokeError
         ) and "error code: 40005" in str(e):

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def check_cooldown_factory(
     seconds: int = 10,
 ) -> ty.Callable[[discord.Interaction], discord.app_commands.Cooldown | None]:
-    """Global cooldown for commands"""
+    """Global cooldown for commands."""
 
     def check_cooldown(
         ia: discord.Interaction,

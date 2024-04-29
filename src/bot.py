@@ -1,4 +1,5 @@
 import logging
+import os
 from inspect import getmembers, isclass
 
 import discord
@@ -37,6 +38,15 @@ class DiscordBot(commands.Bot):
 
         # Add all cogs
         for module in getmembers(cogs, isclass):
+            # Disable specific cogs if specific environment variables are not set
+            if module[1].__name__ == "AI" and not (
+                len(os.getenv("OPENAI_API_KEY", ""))
+                and len(os.getenv("OPENAI_MODEL_NAME", ""))
+            ):
+                continue
+            if module[1].__name__ == "Music" and not len(os.getenv("LAVALINK_URL", "")):
+                continue
+
             await self.add_cog(module[1](self, self.sessionmaker))
 
     async def on_guild_join(self, guild: discord.Guild) -> None:
