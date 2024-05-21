@@ -69,6 +69,7 @@ class Music(CogBase):
                 client=self.bot,
                 nodes=[node],
             )
+            await asyncio.sleep(1)
 
             if node.status == wavelink.NodeStatus.CONNECTED:
                 self.reconnect_count = 0
