@@ -4,7 +4,6 @@ import os
 import typing as ty
 from functools import wraps
 
-import aiohttp
 import discord
 import wavelink
 from discord.client import Client
@@ -265,7 +264,9 @@ class Music(CogBase):
         else:
             vc: wavelink.Player = ia.guild.voice_client
 
-        embedDict = {
+        embedDict: ty.Dict[
+            str, str | int | ty.Dict[str, str] | ty.List[ty.Dict[str, str | int | bool]]
+        ] = {
             "title": f"Queue for server {ia.guild.name}",
             "description": "",
             "color": 65535,

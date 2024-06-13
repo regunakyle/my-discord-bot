@@ -25,7 +25,7 @@ services:
 
   lavalink:
     container_name: lavalink
-    image: ghcr.io/lavalink-devs/lavalink:v4-update-lp
+    image: ghcr.io/lavalink-devs/lavalink:latest
     environment:
       server.port: 2333
       lavalink.server.password: youshallnotpass

@@ -1,7 +1,6 @@
 import logging
 import math
 import os
-import typing as ty
 
 import discord
 import openai

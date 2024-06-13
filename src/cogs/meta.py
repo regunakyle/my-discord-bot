@@ -1,15 +1,16 @@
 import datetime as dt
 import logging
-import typing as ty
 from pathlib import Path
 
 import discord
+import pygit2
+import tomllib
 from discord.ext import commands
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, insert, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from src import models
 from src.cogs._cog_base import CogBase
+from src.models import Guild
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,8 @@ class Meta(CogBase):
         # Sync database with joined guilds
         async with self.sessionmaker() as session:
             await session.execute(
-                delete(models.Guild).where(
-                    ~models.Guild.guild_id.in_([guild.id for guild in self.bot.guilds])
+                delete(Guild).where(
+                    ~Guild.guild_id.in_([guild.id for guild in self.bot.guilds])
                 )
             )
 
@@ -51,9 +52,7 @@ class Meta(CogBase):
             for guild in self.bot.guilds:
                 try:
                     await session.execute(
-                        insert(models.Guild).values(
-                            guild_id=guild.id, guild_name=guild.name
-                        )
+                        insert(Guild).values(guild_id=guild.id, guild_name=guild.name)
                     )
                 except Exception:
                     pass
@@ -126,15 +125,15 @@ class Meta(CogBase):
         async with self.sessionmaker() as session:
             if (
                 await session.execute(
-                    update(models.Guild)
-                    .where(models.Guild.guild_id == ia.guild.id)
-                    .where(models.Guild.bot_channel == ia.channel.id)
+                    update(Guild)
+                    .where(Guild.guild_id == ia.guild.id)
+                    .where(Guild.bot_channel == ia.channel.id)
                     .values(bot_channel=None)
                 )
             ).rowcount == 0:
                 await session.execute(
-                    update(models.Guild)
-                    .where(models.Guild.guild_id == ia.guild.id)
+                    update(Guild)
+                    .where(Guild.guild_id == ia.guild.id)
                     .values(bot_channel=ia.channel.id)
                 )
 
@@ -192,8 +191,8 @@ class Meta(CogBase):
         async with self.sessionmaker() as session:
             if not message:
                 await session.execute(
-                    update(models.Guild)
-                    .where(models.Guild.guild_id == ia.guild.id)
+                    update(Guild)
+                    .where(Guild.guild_id == ia.guild.id)
                     .values(welcome_message=None)
                 )
                 resp = "Welcome message cleared."
@@ -203,8 +202,8 @@ class Meta(CogBase):
                     "unicode-escape"
                 )
                 await session.execute(
-                    update(models.Guild)
-                    .where(models.Guild.guild_id == ia.guild.id)
+                    update(Guild)
+                    .where(Guild.guild_id == ia.guild.id)
                     .values(welcome_message=unescaped_msg)
                 )
                 resp = (
@@ -245,26 +244,31 @@ class Meta(CogBase):
         await message.edit(content="Thread populated.")
 
     @discord.app_commands.command()
-    @discord.app_commands.describe(
-        message="NO double quotes. Hint: \\n, <#ChannelNumber>, <@UserID>, <a:EmojiName:EmojiID>",
-    )
-    async def broadcast(self, ia: discord.Interaction, message: str = "") -> None:
-        """(OWNER ONLY) Send a message to every bot channel in database."""
-        if not await self.bot.is_owner(ia.user):
-            await ia.response.send_message("Only the bot owner may use this command!")
-            return
+    async def version(self, ia: discord.Interaction) -> None:
+        """Report the current version of the bot."""
 
-        if len(message) > 2000:
-            await ia.response.send_message("Your message is too long!")
-            return
+        git = Path("./.git")
+        pyproject = Path("./pyproject.toml")
+        version_template = "Current bot version: {version}"
 
-        async with self.sessionmaker() as session:
-            channels: ty.List[int] = (
-                await session.execute(select(models.Guild.bot_channel))
-            ).scalars()
-            await ia.response.send_message("Broadcasting...")
-            for channel in channels:
+        if (
+            git.exists()
+            and (repo := pygit2.Repository(str(git))).head.shorthand != "main"
+        ):
+            await ia.response.send_message(
+                version_template.format(
+                    version=f"{repo.head.shorthand}-{repo.revparse('HEAD').from_object.short_id}"
+                )
+            )
+        elif pyproject.exists():
+            with open(pyproject, "rb") as toml:
                 try:
-                    await self.bot.get_channel(channel).send(message)
-                except Exception:
-                    pass
+                    await ia.response.send_message(
+                        version_template.format(
+                            version=tomllib.load(toml)["tool"]["poetry"]["version"]
+                        )
+                    )
+                except KeyError:
+                    await ia.response.send_message("Version not found!")
+        else:
+            await ia.response.send_message("Version not found!")
