@@ -27,8 +27,15 @@ services:
     container_name: lavalink
     image: ghcr.io/lavalink-devs/lavalink:latest
     environment:
-      server.port: 2333
-      lavalink.server.password: youshallnotpass
+      SERVER_PORT: 2333
+      LAVALINK_SERVER_PASSWORD: youshallnotpass
+      LAVALINK_SERVER_SOURCES_YOUTUBE: false
+      # See https://github.com/lavalink-devs/youtube-source for the latest version of the plugin
+      LAVALINK_PLUGINS_0_DEPENDENCY: dev.lavalink.youtube:youtube-plugin:1.3.0
+      PLUGINS_YOUTUBE_ENABLED: true
+      PLUGINS_YOUTUBE_CLIENTS_0: MUSIC
+      PLUGINS_YOUTUBE_CLIENTS_1: ANDROID
+      PLUGINS_YOUTUBE_CLIENTS_2: WEB
     ports:
       - 2333:2333
     restart: unless-stopped

@@ -228,6 +228,12 @@ class Music(CogBase):
             await ia.followup.send("Your link is invalid!")
             return
 
+        if not tracks:
+            await ia.followup.send(
+                "Could not find any tracks with that query. Please try again."
+            )
+            return
+
         if isinstance(tracks, wavelink.Playlist):
             # Convert wavelink.Playlist to ty.List[wavelink.Playable]
             tracks = [tracks.tracks[tracks.selected if tracks.selected >= 0 else 0]]
