@@ -1,9 +1,7 @@
 import logging
 import os
-import tempfile
 import typing as ty
 
-import aiohttp
 import discord
 from discord.ext import commands
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker

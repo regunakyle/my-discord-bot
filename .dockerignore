@@ -151,10 +151,8 @@ cython_debug/
 Dockerfile
 compose.yaml
 poetry.lock
-pyproject.toml
-.git
 .github
-.gitignore
 .dockerignore
 .env.example
 /test
+.ruff_cache
