@@ -22,6 +22,7 @@ WORKDIR /app
 COPY . .
 
 RUN useradd nonroot && \ 
+printf "[safe]\ndirectory = /app" >/etc/gitconfig && \ 
 mkdir gallery-dl && \ 
 chmod -R 777 ./
 
