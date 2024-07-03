@@ -11,6 +11,8 @@ from src.cogs._cog_base import CogBase, check_cooldown_factory
 
 logger = logging.getLogger(__name__)
 
+# TODO: Handle bad connections
+
 
 class AI(CogBase):
     def __init__(

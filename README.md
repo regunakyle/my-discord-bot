@@ -16,9 +16,31 @@ This Discord bot is developed with Python 3.11. Use the same Python version to e
 
 4. Run `python main.py` in your console to start up the bot.
 
-5. To use the music player, you need to run a [Lavalink](https://github.com/freyacodes/Lavalink) instance alongside the bot.
+5. To use the music player, you need to run a [Lavalink](https://github.com/freyacodes/Lavalink) instance alongside the bot. Set `LAVALINK_URL` and `LAVALINK_PASSWORD` in `.env`.
 
-   The config for Lavalink can be found in `.env`.
+    Example config file (`application.yml`) for Lavalink:
+
+```yaml
+server: 
+  port: 2333
+  address: 0.0.0.0
+plugins:
+  youtube:
+    enabled: true
+    clients:
+      - MUSIC
+      - ANDROID
+      - WEB
+      - TVHTML5EMBEDDED
+lavalink:
+  plugins:
+  # See https://github.com/lavalink-devs/youtube-source for the latest version of the plugin
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.3.0"
+  server:
+    password: "youshallnotpass"
+    sources:
+      youtube: false
+```
 
 6. To use the AI chat command, set `OPENAI_API_KEY` and `OPENAI_MODEL_NAME` in `.env`.
 
@@ -40,7 +62,7 @@ Note: The `latest` tag refers to the latest stable version.
   - [ ] Music.play: Add Spotify support
   - [ ] General.pixiv: Rewrite (refer to Phixiv implementation)
   - [ ] AI.draw: Add [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui) support
-- [ ] Docker support iGPU for FFMPEG
+- [ ] Allow passing arguments to FFMPEG (for hardware acceleration)
 - [ ] Allow bot owner to run every command (including admin only commands)
 
 ## Notable commands
@@ -84,7 +106,7 @@ The list below only shows a subset of commands which I think need further explan
     Start the discord bot container, then run in console:
 
     1. `docker exec -it <container-name-or-id> /bin/bash`
-    2. `gallery-dl oauth:pixiv -o browser=`
+    2. `gallery-dl oauth:pixiv`
     3. Follow the instructions given
 
 ### `/connect_music`
@@ -95,7 +117,7 @@ The list below only shows a subset of commands which I think need further explan
 
   Do NOT use this command while the bot is playing music!
 
-- Lavalink can be unstable (probably because YouTube often changes their Innertube API).
+- Lavalink can be unstable (probably because YouTube changes their Innertube API often).
 
   If the music player consistently produce errors, go to the Lavalink discord to check if there is a hotfix version of Lavalink.
 

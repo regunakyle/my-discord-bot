@@ -62,8 +62,7 @@ class General(CogBase):
         # Delay response, maximum 15 mins
         await ia.response.defer()
 
-        # Load Gallery-DL config and set maximum file size
-        config.load(("./volume/gallery-dl/config.json",))
+        # TODO: Add encoder config
         config.set(
             ("downloader",),
             "filesize-max",
@@ -130,7 +129,7 @@ class General(CogBase):
                 case 16:
                     # AuthenticationError: No token provided
                     await ia.followup.send(
-                        "Cannot login to Pixiv. Please notify the bot owner! \nBot owner: Please find instructions in https://github.com/regunakyle/my-discord-bot#pixiv-pixiv_link-image_number."
+                        "Cannot login to Pixiv. Please notify the bot owner! \nTo the bot owner: Please find instructions in https://github.com/regunakyle/my-discord-bot#important-you-must-have-ffmepg-installed-and-setup-an-oauth-token-to-use-this-command"
                     )
                     return
                 case _:
