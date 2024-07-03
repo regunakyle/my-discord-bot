@@ -15,7 +15,7 @@ COPY --from=compile-image /bin/ffmpeg /bin/ffmpeg
 
 # Override system Python with the one in venv
 ENV PATH=/opt/venv/bin:$PATH \
-    XDG_CONFIG_HOME=/app/volume
+    XDG_CACHE_HOME=/app/volume
 
 WORKDIR /app
 

@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import shutil
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
@@ -21,11 +20,6 @@ async def main() -> None:
     # Initialization
     Path("./volume/logs").mkdir(parents=True, exist_ok=True)
     Path("./volume/gallery-dl").mkdir(parents=True, exist_ok=True)
-    if not Path("./volume/gallery-dl/config.json").is_file():
-        try:
-            shutil.copy2("./assets/gallery-dl/config.json", "./volume/gallery-dl")
-        except Exception:
-            pass
 
     # Logger
     logger = logging.getLogger()
