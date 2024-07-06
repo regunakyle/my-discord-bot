@@ -28,7 +28,7 @@ class AI(CogBase):
     @discord.app_commands.describe(
         message="Message to the AI.",
         prompt="Prompt for the AI. Default prompt is focused on answering programming questions.",
-        temperature="(Default: 100) Value between 0 and 200 (unit: percentage). Lower value makes the AI more focused and deterministic.",
+        temperature="(Default: 100) Value between 0 and 200. Lower value makes the AI more focused and deterministic.",
     )
     async def chat(
         self,

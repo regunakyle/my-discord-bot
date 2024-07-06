@@ -99,7 +99,12 @@ class General(CogBase):
 
             if not link.is_file():
                 await ia.followup.send(
-                    f"Something went wrong.{' Maybe your image_number is out of range?' if image_number > 1 else ''}"
+                    "Something went wrong."
+                    + (
+                        " Maybe your image_number is out of range?"
+                        if image_number > 1
+                        else ""
+                    )
                 )
                 return
 
@@ -135,7 +140,7 @@ class General(CogBase):
                 case _:
                     logger.error(f"Gallery-DL failed. Status code: {download.status}")
                     await ia.followup.send(
-                        "Something went wrong. Please notify the bot owner if this persists."
+                        "Something went wrong. Please notify the bot owner if the error persists."
                     )
                     return
 

@@ -69,13 +69,13 @@ class Meta(CogBase):
         """Display all available commands, or show the explanation of <command_name>."""
         if not command_name:
             embedDict = {
-                "title": f"{self.bot.application.name}: Help",
-                "description": f"{self.bot.description}",
+                "title": "List of commands",
+                "description": self.bot.description,
                 "color": 65327,
                 "author": {
-                    "name": "Reguna (reguna)",
+                    "name": self.bot.application.name,
                     "url": "https://github.com/regunakyle/my-discord-bot",
-                    "icon_url": self.bot.get_user(263243377821089792).avatar.url,
+                    "icon_url": self.bot.user.avatar.url,
                 },
                 "fields": [],
             }
@@ -83,7 +83,7 @@ class Meta(CogBase):
             for key in self.bot.cogs.keys():
                 field = {"name": key, "value": ""}
                 for command in self.bot.cogs[key].get_app_commands():
-                    field["value"] += f"{command.name} "
+                    field["value"] += f"`{command.name}` "
                 if not field["value"]:
                     continue
                 embedDict["fields"].append(field)
@@ -108,7 +108,8 @@ class Meta(CogBase):
                 )
                 embedDict["fields"].append(
                     {
-                        "name": parameter.name,
+                        "name": parameter.name
+                        + (" (REQUIRED)" if parameter.required else ""),
                         "value": parameter.description
                         if parameter.description
                         else "No description (yet).",

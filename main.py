@@ -67,7 +67,7 @@ async def main() -> None:
 
     activity = discord.Game(name="/help")
 
-    description = "Discord bot for self use. \nWritten in Python using discord.py."
+    description = "Discord bot my own use. \nCreated with [discord.py](https://github.com/Rapptz/discord.py)."
 
     bot = DiscordBot(
         os.getenv("PREFIX", ">>"), intents, activity, description, async_session

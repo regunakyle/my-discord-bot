@@ -249,9 +249,9 @@ class Music(CogBase):
 
         await vc.queue.put_wait(track)
         await ia.followup.send(
-            f"Song *{track.title}* added to queue!"
+            f"Song `{track.title}` added to queue!"
             + (
-                f"\n(Note: Currently looping *{vc.current.title}*)"
+                f"\n(Note: Currently looping `{vc.current.title}`)"
                 if vc.queue.mode != wavelink.QueueMode.normal
                 else ""
             )
