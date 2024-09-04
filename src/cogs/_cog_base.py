@@ -41,7 +41,7 @@ class CogBase(commands.Cog):
         """
 
         if guild is None:
-            return 25
+            return 10
 
         # Nitro level and their maximum upload size
         nitroCount = guild.premium_subscription_count

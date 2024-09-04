@@ -7,7 +7,7 @@ services:
       # Used by old style prefix commands; this bot only has the <PREFIX>sync prefix command
       PREFIX: ">>"
       # Maximum file upload size (in MiB), used by command like /pixiv
-      MAX_FILE_SIZE: 25
+      MAX_FILE_SIZE: 10
       # Lavalink parameters, used by the Music module
       # The Music module will be disabled if LAVALINK_URL is empty
       LAVALINK_URL: http://lavalink:2333
