@@ -4,7 +4,7 @@ FROM python:3.11 AS compile-image
 
 WORKDIR /app
 
-COPY init.sh requirements.txt ./
+COPY init.sh pyproject.toml ./
 
 RUN chmod u+x ./init.sh && \ 
 ./init.sh
@@ -24,6 +24,7 @@ COPY . .
 RUN useradd nonroot && \ 
 printf "[safe]\ndirectory = /app" >/etc/gitconfig && \ 
 mkdir gallery-dl && \ 
+# Use `chmod 777` here instead of `chown nonroot` in case user wants to use their own docker user
 chmod -R 777 ./
 
 USER nonroot

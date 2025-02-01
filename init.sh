@@ -34,6 +34,6 @@ popd
 # Install Python dependencies
 python -m venv /opt/venv
 PATH=/opt/venv/bin:$PATH
-pip install -r requirements.txt --no-cache-dir
+pip install . --no-cache-dir
 
 exit 0

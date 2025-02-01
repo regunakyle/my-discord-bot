@@ -53,7 +53,7 @@ Note: The `latest` tag refers to the latest stable version.
 ## Features
 
 1. A music player to play Youtube videos in any voice channel (requires a Lavalink server)
-2. Chat with AI (requires an OpenAI compatible API endpoint, e.g. [text-generation-webui](https://github.com/oobabooga/text-generation-webui))
+2. Chat with AI (requires an OpenAI compatible API server, e.g. [tabbyAPI](https://github.com/theroyallab/tabbyAPI))
 3. A bunch of other commands I created for my needs...
 
 ## TODO List
