@@ -1,12 +1,13 @@
 [project]
 name = "my-discord-bot"
-version = "4.0.0"
+version = "4.0.1"
 description = "Discord Bot by Reguna"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "aiohttp==3.*",
     "aiosqlite==0.*",
+    "alembic==1.*",
     "discord-py[voice]==2.*",
     "gallery-dl==1.*",
     "openai==1.*",
