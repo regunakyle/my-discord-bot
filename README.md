@@ -29,8 +29,9 @@ plugins:
     enabled: true
     clients: ["MUSIC", "WEB", "MWEB", "WEBEMBEDDED", "ANDROID_MUSIC", "ANDROID_VR", "TV", "TVHTML5EMBEDDED"]
     oauth:
+    # See https://github.com/lavalink-devs/youtube-source?tab=readme-ov-file#using-oauth-tokens for more info
       enabled: true
-      refreshToken: <Redacted>
+      refreshToken: <Use your own oauth token here>
 lavalink:
   plugins:
   # See https://github.com/lavalink-devs/youtube-source for the latest version of the plugin
@@ -38,7 +39,7 @@ lavalink:
   server:
     password: "youshallnotpass"
     sources:
-      youtube: fals
+      youtube: false
 ```
 
 6. To use the AI chat command, set `OPENAI_API_KEY` and `OPENAI_MODEL_NAME` in `.env`.

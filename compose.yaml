@@ -3,7 +3,7 @@ services:
     container_name: discordbot
     image: regunakyle/my-discord-bot:latest
     environment:
-      DISCORD_TOKEN: <YOUR_TOKEN_HERE>
+      DISCORD_TOKEN: <Your token here>
       # Used by old style prefix commands; this bot only has the <PREFIX>sync prefix command
       PREFIX: ">>"
       # Maximum file upload size (in MiB), used by command like /pixiv
@@ -29,14 +29,21 @@ services:
     environment:
       SERVER_PORT: 2333
       LAVALINK_SERVER_PASSWORD: youshallnotpass
-      LAVALINK_SERVER_SOURCES_YOUTUBE: false
+      LAVALINK_SERVER_SOURCES_YOUTUBE: "false"
       # See https://github.com/lavalink-devs/youtube-source for the latest version of the plugin
-      LAVALINK_PLUGINS_0_DEPENDENCY: dev.lavalink.youtube:youtube-plugin:1.3.0
-      PLUGINS_YOUTUBE_ENABLED: true
+      LAVALINK_PLUGINS_0_DEPENDENCY: dev.lavalink.youtube:youtube-plugin:1.11.4
+      PLUGINS_YOUTUBE_ENABLED: "true"
       PLUGINS_YOUTUBE_CLIENTS_0: MUSIC
-      PLUGINS_YOUTUBE_CLIENTS_1: ANDROID
-      PLUGINS_YOUTUBE_CLIENTS_2: WEB
-      PLUGINS_YOUTUBE_CLIENTS_3: TVHTML5EMBEDDED
+      PLUGINS_YOUTUBE_CLIENTS_1: WEB
+      PLUGINS_YOUTUBE_CLIENTS_2: MWEB
+      PLUGINS_YOUTUBE_CLIENTS_3: WEBEMBEDDED
+      PLUGINS_YOUTUBE_CLIENTS_4: ANDROID_MUSIC
+      PLUGINS_YOUTUBE_CLIENTS_5: ANDROID_VR
+      PLUGINS_YOUTUBE_CLIENTS_6: TV
+      PLUGINS_YOUTUBE_CLIENTS_7: TVHTML5EMBEDDED
+      # See https://github.com/lavalink-devs/youtube-source?tab=readme-ov-file#using-oauth-tokens for more info
+      PLUGINS_YOUTUBE_OAUTH_ENABLED: "true"
+      PLUGINS_YOUTUBE_OAUTH_REFRESHTOKEN: <Use your own oauth token here>
     restart: unless-stopped
 
 volumes:

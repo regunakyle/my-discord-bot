@@ -147,6 +147,7 @@ cython_debug/
 .project
 /gallery-dl
 .ruff_cache
+compose-dev.yaml
 
 # Docker Extras
 Dockerfile
