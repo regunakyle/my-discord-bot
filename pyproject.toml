@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "aiohttp==3.*",
     "aiosqlite==0.*",
+    "alembic==1.*",
     "discord-py[voice]==2.*",
     "gallery-dl==1.*",
     "openai==1.*",

@@ -5,6 +5,8 @@ from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 import discord
+from alembic import command
+from alembic.config import Config
 from dotenv import load_dotenv
 from sqlalchemy import event
 from sqlalchemy.engine.interfaces import DBAPIConnection
@@ -12,39 +14,46 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import ConnectionPoolEntry
 
 from .bot import DiscordBot
-from .models import ModelBase
+
+# Initialization
+Path("./volume/logs").mkdir(parents=True, exist_ok=True)
+Path("./volume/gallery-dl").mkdir(parents=True, exist_ok=True)
+
+# Logger
+logger = logging.getLogger()
+logger.setLevel("INFO")
+logger.addHandler(logging.StreamHandler())
+# Time Rotating File Handler
+logHandler = TimedRotatingFileHandler(
+    Path("./volume/logs/discord.log"), when="D", backupCount=10, encoding="utf-8"
+)
+logHandler.setFormatter(
+    logging.Formatter(
+        "%(asctime)s %(levelname)-8s %(name)-15s %(message)s",
+        datefmt="%H:%M:%S",
+    )
+)
+logger.addHandler(logHandler)
+
+
+# Load .env and basic sanity checking
+load_dotenv(dotenv_path="./.env")
+for env in ["DISCORD_TOKEN", "PREFIX"]:
+    if not os.getenv(env):
+        errMsg = f"{env} is not set in both .env and the OS environment. Exiting..."
+        logger.error(errMsg)
+        raise Exception(errMsg)
+
+logging.info("Running migrations...")
+alembic_cfg = Config("./alembic.ini")
+alembic_cfg.attributes["no_alembic_loggers"] = True
+command.upgrade(alembic_cfg, "head")
 
 
 async def main() -> None:
     """Entrypoint of the bot."""
 
-    # Initialization
-    Path("./volume/logs").mkdir(parents=True, exist_ok=True)
-    Path("./volume/gallery-dl").mkdir(parents=True, exist_ok=True)
-
-    # Logger
-    logger = logging.getLogger()
-    logger.setLevel("INFO")
-    logger.addHandler(logging.StreamHandler())
-    # Time Rotating File Handler
-    logHandler = TimedRotatingFileHandler(
-        Path("./volume/logs/discord.log"), when="D", backupCount=10, encoding="utf-8"
-    )
-    logHandler.setFormatter(
-        logging.Formatter(
-            "%(asctime)s %(levelname)-8s %(name)-15s %(message)s",
-            datefmt="%H:%M:%S",
-        )
-    )
-    logger.addHandler(logHandler)
-
-    # Load .env and basic sanity checking
-    load_dotenv(dotenv_path="./.env")
-    for env in ["DISCORD_TOKEN", "PREFIX"]:
-        if not os.getenv(env):
-            errMsg = f"{env} is not set in both .env and the OS environment. Exiting..."
-            logger.error(errMsg)
-            raise Exception(errMsg)
+    logging.info("\nSetting up the bot...")
 
     # Database initialization
     engine = create_async_engine("sqlite+aiosqlite:///volume/db.sqlite3", echo=True)
@@ -58,8 +67,6 @@ async def main() -> None:
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 
-    async with engine.begin() as conn:
-        await conn.run_sync(ModelBase.metadata.create_all)
     async_session = async_sessionmaker(engine, expire_on_commit=False)
 
     intents = discord.Intents.default()
@@ -74,7 +81,6 @@ async def main() -> None:
         os.getenv("PREFIX", ">>"), intents, activity, description, async_session
     )
 
-    logger.info("STARTING DISCORD BOT PROCESS...\n")
     await bot.start(os.getenv("DISCORD_TOKEN", ""))
 
 

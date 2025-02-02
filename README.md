@@ -63,7 +63,6 @@ Note: The `latest` tag refers to the latest stable version.
   - [ ] AI.draw: Add [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui) support
 - [ ] Allow passing arguments to FFMPEG (for hardware acceleration)
 - [ ] Allow bot owner to run every command (including admin only commands)
-- [ ] Setup migration with alembic
 
 ## Notable commands
 
