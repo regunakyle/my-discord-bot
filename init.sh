@@ -6,10 +6,10 @@ apt -y update
 apt install -y --no-install-recommends curl xz-utils
 
 dir_name=ffmpeg
-mkdir $dir_name
-pushd $dir_name
+mkdir ../$dir_name
+pushd ../$dir_name
 
-# Download compiled binaries and perform filehash checking
+# Download compiled FFMPEG binary and perform filehash checking
 # TODO: Build a static FFMPEG instead of downloading
 xz_name=$(
     curl -JOL https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz \
@@ -21,19 +21,13 @@ md5_name=$(
 )
 md5sum -c "$md5_name"
 
-# Extract the archive
-mkdir $dir_name
-tar xvf "$xz_name" -C "$dir_name" --strip-components 1
-cd $dir_name
-
-# Move it to PATH
+# Extract the archive and move FFMPEG to PATH
+tar xvf "$xz_name" --strip-components 1
 mv ffmpeg /bin/ffmpeg
 
 popd
 
 # Install Python dependencies
-python -m venv /opt/venv
-PATH=/opt/venv/bin:$PATH
-pip install . --no-cache-dir
+uv sync
 
 exit 0

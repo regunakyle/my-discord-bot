@@ -1,25 +1,22 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.11 AS compile-image
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS compile-image
 
 WORKDIR /app
 
-COPY init.sh pyproject.toml ./
+COPY . .
 
 RUN chmod u+x ./init.sh && \ 
 ./init.sh
 
 FROM python:3.11-slim AS build-image
-COPY --from=compile-image /opt/venv /opt/venv
 COPY --from=compile-image /bin/ffmpeg /bin/ffmpeg
-
-# Override system Python with the one in venv
-ENV PATH=/opt/venv/bin:$PATH \
-    XDG_CACHE_HOME=/app/volume
+COPY --from=compile-image /app /app
 
 WORKDIR /app
 
-COPY . .
+# Set XDG_CACHE_HOME for gallery-dl usage
+ENV XDG_CACHE_HOME=/app/volume
 
 RUN useradd nonroot && \ 
 printf "[safe]\ndirectory = /app" >/etc/gitconfig && \ 
@@ -29,4 +26,4 @@ chmod -R 777 ./
 
 USER nonroot
 
-CMD ["python", "-u", "main.py"]
+CMD ["/app/.venv/bin/python", "-m", "my_discord_bot"]

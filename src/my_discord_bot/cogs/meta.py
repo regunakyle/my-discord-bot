@@ -9,8 +9,8 @@ from discord.ext import commands
 from sqlalchemy import delete, insert, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from src.cogs._cog_base import CogBase
-from src.models import Guild
+from ..models import Guild
+from ._cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 

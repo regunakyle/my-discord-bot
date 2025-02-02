@@ -12,34 +12,33 @@ This Discord bot is developed with Python 3.11. Use the same Python version to e
 
 2. Rename `.env.example` to `.env` and put your Discord token inside.
 
-3. Create a virtual python environment and install dependencies from `requirements.txt`.
+3. Create a virtual python environment, activate it, then install dependencies with `pip install -e .`.
 
-4. Run `python main.py` in your console to start up the bot.
+4. Run `python -m my_discord_bot` in your console to start up the bot.
 
 5. To use the music player, you need to run a [Lavalink](https://github.com/freyacodes/Lavalink) instance alongside the bot. Set `LAVALINK_URL` and `LAVALINK_PASSWORD` in `.env`.
 
     Example config file (`application.yml`) for Lavalink:
 
 ```yaml
-server: 
+server:
   port: 2333
   address: 0.0.0.0
 plugins:
   youtube:
     enabled: true
-    clients:
-      - MUSIC
-      - ANDROID
-      - WEB
-      - TVHTML5EMBEDDED
+    clients: ["MUSIC", "WEB", "MWEB", "WEBEMBEDDED", "ANDROID_MUSIC", "ANDROID_VR", "TV", "TVHTML5EMBEDDED"]
+    oauth:
+      enabled: true
+      refreshToken: <Redacted>
 lavalink:
   plugins:
   # See https://github.com/lavalink-devs/youtube-source for the latest version of the plugin
-    - dependency: "dev.lavalink.youtube:youtube-plugin:1.3.0"
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.4"
   server:
     password: "youshallnotpass"
     sources:
-      youtube: false
+      youtube: fals
 ```
 
 6. To use the AI chat command, set `OPENAI_API_KEY` and `OPENAI_MODEL_NAME` in `.env`.

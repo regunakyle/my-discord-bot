@@ -146,13 +146,14 @@ cython_debug/
 .dbeaver
 .project
 /gallery-dl
+.ruff_cache
 
 # Docker Extras
 Dockerfile
 compose.yaml
-poetry.lock
 .github
 .dockerignore
 .env.example
 /test
-.ruff_cache
+.python-version
+.gitignore

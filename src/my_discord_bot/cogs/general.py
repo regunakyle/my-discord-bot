@@ -10,7 +10,7 @@ from discord.ext import commands
 from gallery_dl import config, job
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from src.cogs._cog_base import CogBase, check_cooldown_factory
+from ._cog_base import CogBase, check_cooldown_factory
 
 logger = logging.getLogger(__name__)
 

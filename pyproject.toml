@@ -17,10 +17,11 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = [
-    "ipykernel",
-    "ruff",
-]
+dev = ["ipykernel", "ruff"]
 
 [tool.pyright]
 reportCallInDefaultInitializer = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

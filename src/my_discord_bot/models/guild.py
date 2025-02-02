@@ -1,7 +1,7 @@
 from sqlalchemy import Identity, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.models._model_base import ModelBase
+from ._model_base import ModelBase
 
 
 class Guild(ModelBase):

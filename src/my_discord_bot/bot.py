@@ -7,7 +7,7 @@ from discord.ext import commands
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from src import cogs, models
+from . import cogs, models
 
 logger = logging.getLogger(__name__)
 
