@@ -10,7 +10,7 @@ from discord.client import Client
 from discord.ext import commands, tasks
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from src.cogs._cog_base import CogBase
+from ._cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +53,7 @@ class Music(CogBase):
     ######################################
     # UTILITIES
 
+    # TODO: Fix
     async def connect_node(self) -> bool:
         """Connect to a Lavalink node."""
         await self.bot.wait_until_ready()

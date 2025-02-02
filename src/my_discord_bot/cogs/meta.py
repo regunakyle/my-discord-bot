@@ -9,8 +9,8 @@ from discord.ext import commands
 from sqlalchemy import delete, insert, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from src.cogs._cog_base import CogBase
-from src.models import Guild
+from ..models import Guild
+from ._cog_base import CogBase
 
 logger = logging.getLogger(__name__)
 
@@ -132,13 +132,22 @@ class Meta(CogBase):
                     .values(bot_channel=None)
                 )
             ).rowcount == 0:
-                await session.execute(
-                    update(Guild)
-                    .where(Guild.guild_id == ia.guild.id)
-                    .values(bot_channel=ia.channel.id)
-                )
-
                 resp = f"Bot channel set to <#{ia.channel.id}>."
+
+                if (
+                    await session.execute(
+                        update(Guild)
+                        .where(Guild.guild_id == ia.guild.id)
+                        .values(bot_channel=ia.channel.id)
+                    )
+                ).rowcount == 0:
+                    session.add(
+                        Guild(
+                            guild_id=ia.guild.id,
+                            guild_name=ia.guild.name,
+                            bot_channel=ia.channel.id,
+                        )
+                    )
             await session.commit()
         await ia.response.send_message(resp)
 
@@ -202,14 +211,23 @@ class Meta(CogBase):
                 unescaped_msg = message.encode("latin-1", "backslashreplace").decode(
                     "unicode-escape"
                 )
-                await session.execute(
-                    update(Guild)
-                    .where(Guild.guild_id == ia.guild.id)
-                    .values(welcome_message=unescaped_msg)
-                )
-                resp = (
-                    f"Welcome message set. Example:\n<@{ia.user.id}>\n{unescaped_msg}"
-                )
+                resp = f"Welcome message set. Example message:\n<@{ia.user.id}>\n{unescaped_msg}"
+
+                if (
+                    await session.execute(
+                        update(Guild)
+                        .where(Guild.guild_id == ia.guild.id)
+                        .values(welcome_message=unescaped_msg)
+                    )
+                ).rowcount == 0:
+                    session.add(
+                        Guild(
+                            guild_id=ia.guild.id,
+                            guild_name=ia.guild.name,
+                            welcome_message=unescaped_msg,
+                        )
+                    )
+
             await session.commit()
         await ia.response.send_message(resp)
 
