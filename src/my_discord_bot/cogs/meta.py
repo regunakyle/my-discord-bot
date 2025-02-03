@@ -284,7 +284,7 @@ class Meta(CogBase):
                 try:
                     await ia.response.send_message(
                         version_template.format(
-                            version=tomllib.load(toml)["tool"]["poetry"]["version"]
+                            version=tomllib.load(toml)["project"]["version"]
                         )
                     )
                 except KeyError:
