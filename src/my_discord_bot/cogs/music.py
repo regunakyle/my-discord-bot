@@ -112,9 +112,7 @@ class Music(CogBase):
 
     async def check_user_bot_same_channel(self, ia: discord.Interaction) -> bool:
         """Return True if the user is in the same channel as the bot."""
-        vc: discord.VoiceProtocol = discord.utils.get(
-            self.bot.voice_clients, guild=ia.guild
-        )
+        vc = discord.utils.get(self.bot.voice_clients, guild=ia.guild)
         if vc:
             channel: discord.VoiceChannel | discord.StageChannel = vc.channel
             try:
@@ -123,6 +121,20 @@ class Music(CogBase):
                 return False
         else:
             return True
+
+    async def play_track(
+        self, player: wavelink.Player, track: wavelink.Playable
+    ) -> None:
+        """Play a track. Also handles seeking to a specific start time."""
+        await player.play(track, end=dict(track.extras)["end"])
+        if dict(track.extras)["start"] != 0:
+            # https://github.com/lavalink-devs/youtube-source/issues/97
+            await player.pause(True)
+            await asyncio.sleep(1)
+            await player.pause(False)
+            await player.seek(dict(track.extras)["start"])
+
+        logger.info(f"Playing track: {track.title}")
 
     # UTILITIES END
     ######################################
@@ -179,9 +191,7 @@ class Music(CogBase):
                 return
 
             await asyncio.sleep(1)
-            await payload.player.play(
-                track, start=dict(track.extras)["start"], end=dict(track.extras)["end"]
-            )
+            await self.play_track(payload.player, track)
         else:
             logger.error(f"Music playing stopped. Reason: {payload.reason.upper()}")
             await payload.player.channel.send(
@@ -228,6 +238,10 @@ class Music(CogBase):
             )
             return
 
+        if end and start >= end:
+            await ia.response.send_message("Start time must be earlier than end time!")
+            return
+
         # Delay response, maximum 15 mins
         await ia.response.defer()
 
@@ -260,8 +274,8 @@ class Music(CogBase):
             # Add requester name to track, so that the `queue` command can show it
             "requester": ia.user.name,
             # Add start and end time to track (used by the voice player)
-            "start": start,
-            "end": end,
+            "start": start * 1000,
+            "end": end * 1000 if end is not None else None,
         }
 
         await vc.queue.put_wait(track)
@@ -275,9 +289,7 @@ class Music(CogBase):
         )
         if not vc.playing:
             track = vc.queue.get()
-            await vc.play(
-                track, start=dict(track.extras)["start"], end=dict(track.extras)["end"]
-            )
+            await self.play_track(vc, track)
 
     @discord.app_commands.command()
     @discord.app_commands.guild_only()
