@@ -112,9 +112,7 @@ class Music(CogBase):
 
     async def check_user_bot_same_channel(self, ia: discord.Interaction) -> bool:
         """Return True if the user is in the same channel as the bot."""
-        vc: discord.VoiceProtocol = discord.utils.get(
-            self.bot.voice_clients, guild=ia.guild
-        )
+        vc = discord.utils.get(self.bot.voice_clients, guild=ia.guild)
         if vc:
             channel: discord.VoiceChannel | discord.StageChannel = vc.channel
             try:
@@ -123,6 +121,20 @@ class Music(CogBase):
                 return False
         else:
             return True
+
+    async def play_track(
+        self, player: wavelink.Player, track: wavelink.Playable
+    ) -> None:
+        """Play a track. Also handles seeking to a specific start time."""
+        await player.play(track, end=dict(track.extras)["end"])
+        if dict(track.extras)["start"] != 0:
+            # https://github.com/lavalink-devs/youtube-source/issues/97
+            await player.pause(True)
+            await asyncio.sleep(1)
+            await player.pause(False)
+            await player.seek(dict(track.extras)["start"])
+
+        logger.info(f"Playing track: {track.title}")
 
     # UTILITIES END
     ######################################
@@ -146,7 +158,7 @@ class Music(CogBase):
         for member in payload.player.channel.members:
             if not member.bot:
                 await payload.player.channel.send(
-                    "Now playing *{title}*{looping}!".format(
+                    "Now playing `{title}`{looping}!".format(
                         title=payload.track.title,
                         looping=" (looping)"
                         if payload.player.queue.mode != wavelink.QueueMode.normal
@@ -179,7 +191,7 @@ class Music(CogBase):
                 return
 
             await asyncio.sleep(1)
-            await payload.player.play(track)
+            await self.play_track(payload.player, track)
         else:
             logger.error(f"Music playing stopped. Reason: {payload.reason.upper()}")
             await payload.player.channel.send(
@@ -198,9 +210,17 @@ class Music(CogBase):
     @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         youtube_url="URL of the Youtube video you want to play.",
+        start="Start time of the song in seconds. Default: 0",
+        end="End time of the song in seconds. Default: None",
     )
     @check_node_exist
-    async def play(self, ia: discord.Interaction, youtube_url: str) -> None:
+    async def play(
+        self,
+        ia: discord.Interaction,
+        youtube_url: str,
+        start: int = 0,
+        end: None | int = None,
+    ) -> None:
         """Play a song with the given search query."""
 
         # User must be in a voice channel
@@ -216,6 +236,10 @@ class Music(CogBase):
             await ia.response.send_message(
                 "You must be in the same voice channel with me to use this command!"
             )
+            return
+
+        if end and start >= end:
+            await ia.response.send_message("Start time must be earlier than end time!")
             return
 
         # Delay response, maximum 15 mins
@@ -245,8 +269,14 @@ class Music(CogBase):
         )
 
         track = tracks[0]
-        # Add requester name to track, so that the `queue` command can show it
-        track.extras = {"requester": ia.user.name}
+        # Extra information of the track
+        track.extras = {
+            # Add requester name to track, so that the `queue` command can show it
+            "requester": ia.user.name,
+            # Add start and end time to track (used by the voice player)
+            "start": start * 1000,
+            "end": end * 1000 if end is not None else None,
+        }
 
         await vc.queue.put_wait(track)
         await ia.followup.send(
@@ -258,7 +288,8 @@ class Music(CogBase):
             )
         )
         if not vc.playing:
-            await vc.play(vc.queue.get())
+            track = vc.queue.get()
+            await self.play_track(vc, track)
 
     @discord.app_commands.command()
     @discord.app_commands.guild_only()
