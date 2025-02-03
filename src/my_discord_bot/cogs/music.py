@@ -158,7 +158,7 @@ class Music(CogBase):
         for member in payload.player.channel.members:
             if not member.bot:
                 await payload.player.channel.send(
-                    "Now playing *{title}*{looping}!".format(
+                    "Now playing `{title}`{looping}!".format(
                         title=payload.track.title,
                         looping=" (looping)"
                         if payload.player.queue.mode != wavelink.QueueMode.normal
