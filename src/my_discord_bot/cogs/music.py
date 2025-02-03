@@ -179,7 +179,9 @@ class Music(CogBase):
                 return
 
             await asyncio.sleep(1)
-            await payload.player.play(track)
+            await payload.player.play(
+                track, start=dict(track.extras)["start"], end=dict(track.extras)["end"]
+            )
         else:
             logger.error(f"Music playing stopped. Reason: {payload.reason.upper()}")
             await payload.player.channel.send(
@@ -198,9 +200,17 @@ class Music(CogBase):
     @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         youtube_url="URL of the Youtube video you want to play.",
+        start="Start time of the song in seconds. Default: 0",
+        end="End time of the song in seconds. Default: None",
     )
     @check_node_exist
-    async def play(self, ia: discord.Interaction, youtube_url: str) -> None:
+    async def play(
+        self,
+        ia: discord.Interaction,
+        youtube_url: str,
+        start: int = 0,
+        end: None | int = None,
+    ) -> None:
         """Play a song with the given search query."""
 
         # User must be in a voice channel
@@ -245,8 +255,14 @@ class Music(CogBase):
         )
 
         track = tracks[0]
-        # Add requester name to track, so that the `queue` command can show it
-        track.extras = {"requester": ia.user.name}
+        # Extra information of the track
+        track.extras = {
+            # Add requester name to track, so that the `queue` command can show it
+            "requester": ia.user.name,
+            # Add start and end time to track (used by the voice player)
+            "start": start,
+            "end": end,
+        }
 
         await vc.queue.put_wait(track)
         await ia.followup.send(
@@ -258,7 +274,10 @@ class Music(CogBase):
             )
         )
         if not vc.playing:
-            await vc.play(vc.queue.get())
+            track = vc.queue.get()
+            await vc.play(
+                track, start=dict(track.extras)["start"], end=dict(track.extras)["end"]
+            )
 
     @discord.app_commands.command()
     @discord.app_commands.guild_only()

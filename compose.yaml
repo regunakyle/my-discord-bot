@@ -21,6 +21,9 @@ services:
       OPENAI_BASE_URL: http://localhost:5000/v1
     volumes:
       - dbot-vol:/app/volume
+    depends_on:
+      lavalink:
+        condition: service_started
     restart: unless-stopped
 
   lavalink:
