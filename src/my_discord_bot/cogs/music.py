@@ -474,7 +474,7 @@ class Music(CogBase):
         self,
         ia: discord.Interaction,
     ) -> None:
-        """(OWNER ONLY) Use this if the music player is not working.
+        """(OWNER ONLY) Use this to reconnect to a Lavalink node.
 
         Do NOT use this when the bot is playing music."""
 

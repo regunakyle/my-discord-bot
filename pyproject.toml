@@ -17,12 +17,15 @@ dependencies = [
     "wavelink==3.*",
 ]
 
+[project.scripts]
+my-discord-bot = "my_discord_bot:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [dependency-groups]
 dev = ["ipykernel", "ruff"]
 
 [tool.pyright]
 reportCallInDefaultInitializer = true
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"

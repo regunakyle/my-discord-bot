@@ -26,4 +26,4 @@ chmod -R 777 ./
 
 USER nonroot
 
-CMD ["/app/.venv/bin/python", "-m", "my_discord_bot"]
+CMD ["/app/.venv/bin/my-discord-bot"]

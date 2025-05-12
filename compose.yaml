@@ -34,7 +34,7 @@ services:
       LAVALINK_SERVER_PASSWORD: youshallnotpass
       LAVALINK_SERVER_SOURCES_YOUTUBE: "false"
       # See https://github.com/lavalink-devs/youtube-source for the latest version of the plugin
-      LAVALINK_PLUGINS_0_DEPENDENCY: dev.lavalink.youtube:youtube-plugin:1.11.4
+      LAVALINK_PLUGINS_0_DEPENDENCY: dev.lavalink.youtube:youtube-plugin:1.13.2
       PLUGINS_YOUTUBE_ENABLED: "true"
       PLUGINS_YOUTUBE_CLIENTS_0: MUSIC
       PLUGINS_YOUTUBE_CLIENTS_1: WEB

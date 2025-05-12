@@ -14,7 +14,7 @@ This Discord bot is developed with Python 3.11. Use the same Python version to e
 
 3. Create a virtual python environment, activate it, then install dependencies with `pip install -e .`.
 
-4. Run `python -m my_discord_bot` in your console to start up the bot.
+4. Run `my-discord-bot` in your console to start up the bot.
 
 5. To use the music player, you need to run a [Lavalink](https://github.com/freyacodes/Lavalink) instance alongside the bot. Set `LAVALINK_URL` and `LAVALINK_PASSWORD` in `.env`.
 
