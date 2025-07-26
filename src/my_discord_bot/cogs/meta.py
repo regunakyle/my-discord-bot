@@ -1,10 +1,10 @@
 import datetime as dt
 import logging
+import tomllib
 from pathlib import Path
 
 import discord
 import pygit2
-import tomllib
 from discord.ext import commands
 from sqlalchemy import delete, insert, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
