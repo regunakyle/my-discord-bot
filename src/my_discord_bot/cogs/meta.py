@@ -1,5 +1,6 @@
 import datetime as dt
 import logging
+import os
 import tomllib
 from pathlib import Path
 
@@ -266,11 +267,18 @@ class Meta(CogBase):
     async def version(self, ia: discord.Interaction) -> None:
         """Report the current version of the bot."""
 
+        # If deploy via git, then both .git and pyproject.toml should exist.
+        # If deploy via docker, then the environment variable VARIABLE should be set.
+
         git = Path("./.git")
         pyproject = Path("./pyproject.toml")
         version_template = "Current bot version: {version}"
 
-        if (
+        if os.getenv("APP_VERSION"):
+            await ia.response.send_message(
+                version_template.format(version=os.getenv("APP_VERSION"))
+            )
+        elif (
             git.exists()
             and (repo := pygit2.Repository(str(git))).head.shorthand != "main"
         ):
@@ -288,6 +296,8 @@ class Meta(CogBase):
                         )
                     )
                 except KeyError:
-                    await ia.response.send_message("Version not found!")
+                    await ia.response.send_message(
+                        "Version not found in pyproject.toml!"
+                    )
         else:
             await ia.response.send_message("Version not found!")

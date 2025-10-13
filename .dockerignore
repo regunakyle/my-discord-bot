@@ -152,9 +152,12 @@ compose-dev.yaml
 # Docker Extras
 Dockerfile
 compose.yaml
+.git
 .github
+.gitignore
 .dockerignore
 .env.example
 /test
 .python-version
 .gitignore
+.aider.*

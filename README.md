@@ -32,10 +32,12 @@ plugins:
     # See https://github.com/lavalink-devs/youtube-source?tab=readme-ov-file#using-oauth-tokens for more info
       enabled: true
       refreshToken: <Use your own oauth token here>
+    remoteCipher:
+      url: "https://cipher.kikkia.dev/" 
 lavalink:
   plugins:
   # See https://github.com/lavalink-devs/youtube-source for the latest version of the plugin
-    - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.4"
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.15.0"
   server:
     password: "youshallnotpass"
     sources:

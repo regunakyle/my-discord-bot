@@ -119,7 +119,7 @@ class DiscordBot(commands.Bot):
         template = """User {user}({userid}) in guild {guild}({guildid}) invoked the command:
 {command}"""
 
-        logging.info(
+        logger.info(
             template.format(
                 user=ia.user.name,
                 userid=ia.user.id,

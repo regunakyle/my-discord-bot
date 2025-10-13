@@ -148,3 +148,4 @@ cython_debug/
 /gallery-dl
 .ruff_cache
 compose-dev.yaml
+.aider.*
