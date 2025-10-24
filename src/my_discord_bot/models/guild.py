@@ -13,7 +13,7 @@ class Guild(ModelBase):
     __tablename__ = "guild"
 
     id: Mapped[int] = mapped_column(
-        Identity(always=True, start=1, increment=1), primary_key=True, init=False
+        Identity(always=True, start=1, increment=1), primary_key=True
     )
     guild_id: Mapped[int] = mapped_column(unique=True)
     guild_name: Mapped[str] = mapped_column(Unicode(100))

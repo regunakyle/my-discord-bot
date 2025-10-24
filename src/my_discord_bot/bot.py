@@ -46,6 +46,10 @@ class DiscordBot(commands.Bot):
                 continue
             if cog.__name__ == "Music" and not len(os.getenv("LAVALINK_URL", "")):
                 continue
+            if cog.__name__ == "Subscription" and not len(
+                os.getenv("GOOGLE_API_KEY", "")
+            ):
+                continue
 
             await self.add_cog(cog(self, self.sessionmaker))
 

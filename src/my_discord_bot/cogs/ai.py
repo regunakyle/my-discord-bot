@@ -27,15 +27,11 @@ class AI(CogBase):
     @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         message="Message to the AI.",
-        prompt="Prompt for the AI. Default prompt is focused on answering programming questions.",
-        temperature="(Default: 70) Value between 0 and 200. Lower value makes the AI more focused and deterministic.",
     )
     async def chat(
         self,
         ia: discord.Interaction,
         message: str,
-        prompt: str = "You are an experienced full-stack programmer. You excel in Java, Javascript and Python. You enjoy answering programming questions with code and provide concise explanations.",
-        temperature: int = 70,
     ) -> None:
         """(RATE LIMITED) Chat with AI."""
         # TODO: Stream the message instead, edit the Discord response as new chunks arrive
@@ -47,15 +43,11 @@ class AI(CogBase):
                 model=self.model_name,
                 messages=[
                     {
-                        "role": "system",
-                        "content": prompt,
-                    },
-                    {
                         "role": "user",
                         "content": message,
                     },
                 ],
-                temperature=temperature / 100,
+                temperature=0.7,
                 max_tokens=2000,
             )
             .choices[0]
