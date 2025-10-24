@@ -122,9 +122,3 @@ The list below only shows a subset of commands which I think need further explan
 - Lavalink can be unstable (probably because YouTube changes their Innertube API often).
 
   If the music player consistently produce errors, go to the Lavalink discord to check if there is a hotfix version of Lavalink.
-
-### `/chat_model <model_name>`
-
-- Print the model name used by the `/chat` command.
-
-  If `model_name` is set, change the model used by the `/chat` command. (only the bot owner can do this!)

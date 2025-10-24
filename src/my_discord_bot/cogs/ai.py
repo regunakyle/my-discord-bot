@@ -59,24 +59,3 @@ class AI(CogBase):
         if len(message) > 2000:
             for split in range(1, math.ceil(len(message) / 2000) + 1):
                 await ia.followup.send(message[2000 * split : 2000 * (split + 1)])
-
-    @discord.app_commands.command()
-    @discord.app_commands.describe(
-        model_name="(OWNER ONLY) Set the name of the model used by the /chat command.",
-    )
-    async def chat_model(
-        self, ia: discord.Interaction, model_name: str | None = None
-    ) -> None:
-        """Print the model name used by the /chat command."""
-        if not model_name:
-            await ia.response.send_message(
-                f"Current model used by /chat: `{self.model_name}`."
-            )
-            return
-
-        if not await self.bot.is_owner(ia.user):
-            await ia.response.send_message("Only the bot owner may change the model!")
-            return
-
-        self.model_name = model_name
-        await ia.response.send_message(f"LLM model changed to `{model_name}`.")
