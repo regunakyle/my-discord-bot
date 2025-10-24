@@ -1,7 +1,7 @@
 """Add subscription
 
 Revision ID: fec7b1c16b86
-Revises: 4086cccce064
+Revises: 93832be8c5ae
 Create Date: 2025-10-21 01:55:05.679872
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "fec7b1c16b86"
-down_revision: Union[str, None] = "4086cccce064"
+down_revision: Union[str, None] = "93832be8c5ae"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
