@@ -30,4 +30,7 @@ popd
 # Install Python dependencies
 uv sync
 
+# Use `chmod 777` here instead of `chown nonroot` in case user wants to use their own docker user
+chmod -R 777 ./
+
 exit 0

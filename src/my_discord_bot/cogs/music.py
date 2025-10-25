@@ -50,8 +50,7 @@ class Music(CogBase):
         self.check_node_connection_task.start()
         self.leave_inactive_voice_channel_task.start()
 
-    ######################################
-    # UTILITIES
+    # region UTILITIES
 
     # TODO: Fix
     async def connect_node(self) -> bool:
@@ -136,11 +135,9 @@ class Music(CogBase):
 
         logger.info(f"Playing track: {track.title}")
 
-    # UTILITIES END
-    ######################################
+    # endregion UTILITIES
 
-    ######################################
-    # EVENT LISTENERS
+    # region EVENT LISTENERS
 
     @commands.Cog.listener()
     async def on_wavelink_node_ready(
@@ -200,11 +197,9 @@ class Music(CogBase):
             await payload.player.disconnect()
             return
 
-    # EVENT LISTENERS END
-    ######################################
+    # endregion EVENT LISTENERS
 
-    ######################################
-    # COMMANDS
+    # region COMMANDS
 
     @discord.app_commands.command()
     @discord.app_commands.guild_only()
@@ -479,7 +474,7 @@ class Music(CogBase):
         self,
         ia: discord.Interaction,
     ) -> None:
-        """(OWNER ONLY) Use this if the music player is not working.
+        """(OWNER ONLY) Use this to reconnect to a Lavalink node.
 
         Do NOT use this when the bot is playing music."""
 
@@ -495,3 +490,5 @@ class Music(CogBase):
             return
 
         await ia.followup.send("Reconnection failed.")
+
+    # endregion COMMANDS

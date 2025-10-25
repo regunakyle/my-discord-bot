@@ -1,6 +1,6 @@
 [project]
 name = "my-discord-bot"
-version = "4.1.1"
+version = "4.2.0"
 description = "Discord Bot by Reguna"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -10,6 +10,7 @@ dependencies = [
     "alembic==1.*",
     "discord-py[voice]==2.*",
     "gallery-dl==1.*",
+    "google-api-python-client==2.*",
     "openai==1.*",
     "pygit2==1.*",
     "python-dotenv==1.*",
@@ -17,12 +18,17 @@ dependencies = [
     "wavelink==3.*",
 ]
 
-[dependency-groups]
-dev = ["ipykernel", "ruff"]
-
-[tool.pyright]
-reportCallInDefaultInitializer = true
+[project.scripts]
+my-discord-bot = "my_discord_bot:main"
+get-bot-version = "my_discord_bot:get_bot_version"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = ["google-api-python-client-stubs", "ipykernel", "ruff"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+reportCallInDefaultInitializer = true

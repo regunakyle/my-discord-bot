@@ -1,10 +1,11 @@
 import datetime as dt
 import logging
+import os
+import tomllib
 from pathlib import Path
 
 import discord
 import pygit2
-import tomllib
 from discord.ext import commands
 from sqlalchemy import delete, insert, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -232,45 +233,21 @@ class Meta(CogBase):
         await ia.response.send_message(resp)
 
     @discord.app_commands.command()
-    @discord.app_commands.guild_only()
-    @discord.app_commands.checks.has_permissions(manage_channels=True)
-    async def populate_thread(self, ia: discord.Interaction) -> None:
-        """(ADMIN) Populate the current thread without pinging anyone. Only works if your guild has fewer than 1000 members."""
-
-        if "thread" not in ia.channel.type.name:
-            await ia.response.send_message("This channel is not a thread!")
-            return
-        if ia.guild.member_count >= 1000:
-            await ia.response.send_message(
-                "I cannot add this many people to a thread! (1000 members maximum per thread)"
-            )
-            return
-
-        await ia.response.send_message(
-            "Please wait a while I try to add everyone to this thread..."
-        )
-
-        resp = ""
-        message = await ia.channel.send("Processing...")
-        # This probably can be optimized
-        for member in ia.guild.members:
-            if not member.bot:
-                resp += f"<@{member.id}>"
-            if len(resp) >= 2000:
-                await message.edit(content=resp[:2000])
-                resp = f"<@{member.id}>"
-        await message.edit(content=resp)
-        await message.edit(content="Thread populated.")
-
-    @discord.app_commands.command()
     async def version(self, ia: discord.Interaction) -> None:
         """Report the current version of the bot."""
+
+        # If deploy via git, then both .git and pyproject.toml should exist.
+        # If deploy via docker, then the environment variable VARIABLE should be set.
 
         git = Path("./.git")
         pyproject = Path("./pyproject.toml")
         version_template = "Current bot version: {version}"
 
-        if (
+        if os.getenv("APP_VERSION"):
+            await ia.response.send_message(
+                version_template.format(version=os.getenv("APP_VERSION"))
+            )
+        elif (
             git.exists()
             and (repo := pygit2.Repository(str(git))).head.shorthand != "main"
         ):
@@ -288,6 +265,8 @@ class Meta(CogBase):
                         )
                     )
                 except KeyError:
-                    await ia.response.send_message("Version not found!")
+                    await ia.response.send_message(
+                        "Version not found in pyproject.toml!"
+                    )
         else:
             await ia.response.send_message("Version not found!")

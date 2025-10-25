@@ -46,6 +46,10 @@ class DiscordBot(commands.Bot):
                 continue
             if cog.__name__ == "Music" and not len(os.getenv("LAVALINK_URL", "")):
                 continue
+            if cog.__name__ == "Subscription" and not len(
+                os.getenv("GOOGLE_API_KEY", "")
+            ):
+                continue
 
             await self.add_cog(cog(self, self.sessionmaker))
 
@@ -86,6 +90,13 @@ class DiscordBot(commands.Bot):
     async def on_member_join(self, member: discord.Member) -> None:
         """Called when a Member joins a Guild."""
 
+        # HKITHub podcast role auto assign
+        if member.guild.id == 1209882906735149126:
+            try:
+                await member.add_roles(member.guild.get_role(1398691229411315894))
+            except Exception as e:
+                logger.error(f"Failed to assign role: {e}")
+
         channel = member.guild.system_channel
         async with self.sessionmaker() as session:
             guild: Guild | None = (
@@ -112,7 +123,7 @@ class DiscordBot(commands.Bot):
         template = """User {user}({userid}) in guild {guild}({guildid}) invoked the command:
 {command}"""
 
-        logging.info(
+        logger.info(
             template.format(
                 user=ia.user.name,
                 userid=ia.user.id,

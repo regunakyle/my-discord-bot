@@ -4,7 +4,6 @@ import sys
 import typing as ty
 from pathlib import Path
 
-import aiohttp
 import discord
 from discord.ext import commands
 from gallery_dl import config, job
@@ -143,58 +142,3 @@ class General(CogBase):
                         "Something went wrong. Please notify the bot owner if the error persists."
                     )
                     return
-
-    @discord.app_commands.command()
-    @discord.app_commands.checks.dynamic_cooldown(check_cooldown_factory(2))
-    @discord.app_commands.guild_only()
-    @discord.app_commands.describe(
-        amount="Amount in <starting_currency>, ranged from 0 to 1,000,000,000",
-        starting_currency="Starting currency, e.g. HKD",
-        target_currency="Target currency, e.g. USD",
-    )
-    async def forex(
-        self,
-        ia: discord.Interaction,
-        amount: float,
-        starting_currency: str,
-        target_currency: str,
-    ) -> None:
-        """(RATE LIMITED) Convert currency using data from Yahoo Finance."""
-        # Delay response, maximum 15 mins
-        await ia.response.defer()
-
-        forex = (
-            f"{starting_currency}{target_currency}=X"
-            if starting_currency.lower() != "usd"
-            else f"{target_currency}=X"
-        )
-        try:
-            assert 0 < amount < 1e10
-
-            amount = round(amount, 2)
-
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url=f"https://query2.finance.yahoo.com/v8/finance/chart/{forex}",
-                    params={"range": "1d", "interval": "1d"},
-                    timeout=10,
-                ) as response:
-                    quote = await response.json()
-            # Funny response format
-            newAmt = round(
-                quote["chart"]["result"][0]["indicators"]["quote"][0]["close"][0]
-                * amount,
-                2,
-            )
-            await ia.followup.send(
-                f"{amount} {starting_currency.upper()} = {newAmt} {target_currency.upper()}",
-            )
-        except AssertionError:
-            await ia.followup.send(
-                "Please enter a value between 0 and 1,000,000,000.",
-            )
-        except Exception as e:
-            logger.error(e)
-            await ia.followup.send(
-                "Something went wrong. Most likely you inputted nonexistent currency code(s).",
-            )

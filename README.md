@@ -14,7 +14,7 @@ This Discord bot is developed with Python 3.11. Use the same Python version to e
 
 3. Create a virtual python environment, activate it, then install dependencies with `pip install -e .`.
 
-4. Run `python -m my_discord_bot` in your console to start up the bot.
+4. Run `my-discord-bot` in your console to start up the bot.
 
 5. To use the music player, you need to run a [Lavalink](https://github.com/freyacodes/Lavalink) instance alongside the bot. Set `LAVALINK_URL` and `LAVALINK_PASSWORD` in `.env`.
 
@@ -32,10 +32,12 @@ plugins:
     # See https://github.com/lavalink-devs/youtube-source?tab=readme-ov-file#using-oauth-tokens for more info
       enabled: true
       refreshToken: <Use your own oauth token here>
+    remoteCipher:
+      url: "https://cipher.kikkia.dev/" 
 lavalink:
   plugins:
   # See https://github.com/lavalink-devs/youtube-source for the latest version of the plugin
-    - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.4"
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.15.0"
   server:
     password: "youshallnotpass"
     sources:
@@ -120,9 +122,3 @@ The list below only shows a subset of commands which I think need further explan
 - Lavalink can be unstable (probably because YouTube changes their Innertube API often).
 
   If the music player consistently produce errors, go to the Lavalink discord to check if there is a hotfix version of Lavalink.
-
-### `/chat_model <model_name>`
-
-- Print the model name used by the `/chat` command.
-
-  If `model_name` is set, change the model used by the `/chat` command. (only the bot owner can do this!)
