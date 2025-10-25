@@ -101,14 +101,14 @@ The list below only shows a subset of commands which I think need further explan
 
 #### **Important**: You must have `ffmepg` installed and setup an OAuth token to use this command
 
-  To set the OAuth token, run `gallery-dl oauth:pixiv`, then follow the instructions given.
+  To set the OAuth token, run `gallery-dl oauth:pixiv` (activate venv first), then follow the instructions given.
 
 - **If you are using Docker**, `ffmpeg` has already been installed for you.
 
     Start the discord bot container, then run in console:
 
     1. `docker exec -it <container-name-or-id> /bin/bash`
-    2. `gallery-dl oauth:pixiv`
+    2. `./.venv/bin/gallery-dl oauth:pixiv`
     3. Follow the instructions given
 
 ### `/connect_music`

@@ -12,15 +12,17 @@ WORKDIR /app
 
 COPY . .
 
-RUN chmod u+x ./init.sh && \ 
-    ./init.sh
+RUN ./init.sh
 
 FROM python:3.11-slim AS build-image
 
 ARG APP_VERSION
 
+RUN groupadd -g 10001 nonroot && \
+    useradd nonroot -u 10001 -g 10001
+
 COPY --from=compile-image /bin/ffmpeg /bin/ffmpeg
-COPY --from=compile-image /app /app
+COPY --chown=nonroot:nonroot --from=compile-image /app /app
 
 WORKDIR /app
 
@@ -28,9 +30,6 @@ WORKDIR /app
 ENV XDG_CACHE_HOME=/app/volume
 ENV APP_VERSION=$APP_VERSION
 
-RUN useradd nonroot && \
-    mkdir -m 777 gallery-dl
-
 USER nonroot
 
-CMD ["/app/.venv/bin/my-discord-bot"]
+ENTRYPOINT ["/app/.venv/bin/my-discord-bot"]

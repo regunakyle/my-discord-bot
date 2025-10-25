@@ -1,36 +1,37 @@
 #!/bin/bash
 set -eu -o pipefail
 
-# Get essential tools from apt repo
-apt -y update
-apt install -y --no-install-recommends curl xz-utils
+apt-get -y update
+apt-get install -y --no-install-recommends curl xz-utils
+
+# https://serverfault.com/a/984599
+# Allow users to run the container with arbitary user ID
+mkdir -m 777 gallery-dl
+mkdir -m 777 volume
 
 dir_name=ffmpeg
 mkdir ../$dir_name
+
 pushd ../$dir_name
 
-# Download compiled FFMPEG binary and perform filehash checking
 # TODO: Build a static FFMPEG instead of downloading
 xz_name=$(
-    curl -JOL https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz \
+    curl -JOL https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz \
         -w "%{filename_effective}" --retry 3 --retry-all-errors
 )
-md5_name=$(
-    curl -JOL https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz.md5 \
+sha256_name=$(
+    curl -JOL https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/checksums.sha256 \
         -w "%{filename_effective}" --retry 3 --retry-all-errors
 )
-md5sum -c "$md5_name"
+sha256sum -c "$sha256_name" --ignore-missing
 
-# Extract the archive and move FFMPEG to PATH
+# Extract the archive and move FFMPEG to a fixed path
 tar xvf "$xz_name" --strip-components 1
-mv ffmpeg /bin/ffmpeg
+mv ./bin/ffmpeg /bin/ffmpeg
 
 popd
 
 # Install Python dependencies
 uv sync
-
-# Use `chmod 777` here instead of `chown nonroot` in case user wants to use their own docker user
-chmod -R 777 ./
 
 exit 0
