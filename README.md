@@ -6,7 +6,7 @@ Data are stored in an embedded SQLite3 database file.
 
 ## Deployment guide
 
-This Discord bot is developed with Python 3.11. Use the same Python version to ensure maximum compatibility.
+This Discord bot is developed with Python 3.13. Use the same Python version to ensure maximum compatibility.
 
 1. Download the whole source code using `git clone`.
 
