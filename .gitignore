@@ -138,14 +138,8 @@ dmypy.json
 cython_debug/
 
 # General
-/.vscode
 *.ipynb
 /volume
-/unittest
-/.history
-.dbeaver
-.project
 /gallery-dl
 .ruff_cache
-compose-dev.yaml
 .aider.*

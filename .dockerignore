@@ -138,18 +138,14 @@ dmypy.json
 cython_debug/
 
 # General
-/.vscode
 *.ipynb
 /volume
-/unittest
-/.history
-.dbeaver
-.project
 /gallery-dl
 .ruff_cache
-compose-dev.yaml
+.aider.*
 
 # Docker Extras
+/.vscode
 Dockerfile
 compose.yaml
 .git
@@ -160,4 +156,3 @@ compose.yaml
 /test
 .python-version
 .gitignore
-.aider.*
