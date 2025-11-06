@@ -99,7 +99,8 @@ def get_bot_version() -> None:
     if os.getenv("APP_VERSION"):
         print(os.getenv("APP_VERSION"))
     elif (
-        git.exists() and (repo := pygit2.Repository(str(git))).head.shorthand != "main"
+        git.exists()
+        and (repo := pygit2.Repository(str(git))).head.shorthand != "master"
     ):
         print(f"{repo.head.shorthand}-{repo.revparse('HEAD').from_object.short_id}")
         return

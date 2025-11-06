@@ -249,7 +249,7 @@ class Meta(CogBase):
             )
         elif (
             git.exists()
-            and (repo := pygit2.Repository(str(git))).head.shorthand != "main"
+            and (repo := pygit2.Repository(str(git))).head.shorthand != "master"
         ):
             await ia.response.send_message(
                 version_template.format(
