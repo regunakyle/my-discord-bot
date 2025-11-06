@@ -2,7 +2,7 @@
 
 ARG APP_VERSION
 
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS compile-image
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS compile-image
 
 ARG APP_VERSION
 
@@ -14,7 +14,7 @@ COPY . .
 
 RUN ./init.sh
 
-FROM python:3.11-slim AS build-image
+FROM python:3.13-slim AS build-image
 
 ARG APP_VERSION
 

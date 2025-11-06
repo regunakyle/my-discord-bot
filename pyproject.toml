@@ -1,9 +1,9 @@
 [project]
 name = "my-discord-bot"
-version = "4.2.1"
+version = "5.0.0"
 description = "Discord Bot by Reguna"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
     "aiohttp==3.*",
     "aiosqlite==0.*",
