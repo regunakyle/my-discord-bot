@@ -23,7 +23,7 @@ class AI(CogBase):
         self.model_name = os.getenv("OPENAI_MODEL_NAME", "")
 
     @discord.app_commands.command()
-    @discord.app_commands.checks.dynamic_cooldown(check_cooldown_factory(15))
+    @discord.app_commands.checks.dynamic_cooldown(check_cooldown_factory(3))
     @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         message="Message to the AI.",

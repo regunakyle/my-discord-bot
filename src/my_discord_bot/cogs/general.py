@@ -32,7 +32,7 @@ class General(CogBase):
         )
 
     @discord.app_commands.command()
-    @discord.app_commands.checks.dynamic_cooldown(check_cooldown_factory(2))
+    @discord.app_commands.checks.dynamic_cooldown(check_cooldown_factory(3))
     @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         pixiv_link="Pixiv image link",
