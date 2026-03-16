@@ -9,17 +9,17 @@ cog_list = [
     ErrorHandler,
     General,
     Meta,
-    Music,
     AI,
     Subscription,
+    Music,
 ]
 
 __all__ = (
     "ErrorHandler",
     "General",
     "Meta",
-    "Music",
     "AI",
     "cog_list",
     "Subscription",
+    "Music",
 )
