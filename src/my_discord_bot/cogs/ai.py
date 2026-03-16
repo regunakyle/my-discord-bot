@@ -23,7 +23,7 @@ class AI(CogBase):
         self.model_name = os.getenv("OPENAI_MODEL_NAME", "")
 
     @discord.app_commands.command()
-    @discord.app_commands.checks.dynamic_cooldown(check_cooldown_factory(15))
+    @discord.app_commands.checks.dynamic_cooldown(check_cooldown_factory(1.5))
     @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         message="Message to the AI.",
@@ -57,5 +57,5 @@ class AI(CogBase):
         await ia.followup.send(message[:2000])
 
         if len(message) > 2000:
-            for split in range(1, math.ceil(len(message) / 2000) + 1):
+            for split in range(1, math.ceil(len(message) / 2000)):
                 await ia.followup.send(message[2000 * split : 2000 * (split + 1)])

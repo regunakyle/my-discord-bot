@@ -37,14 +37,14 @@ plugins:
 lavalink:
   plugins:
   # See https://github.com/lavalink-devs/youtube-source for the latest version of the plugin
-    - dependency: "dev.lavalink.youtube:youtube-plugin:1.15.0"
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.18.0"
   server:
     password: "youshallnotpass"
     sources:
       youtube: false
 ```
 
-6. To use the AI chat command, set `OPENAI_API_KEY` and `OPENAI_MODEL_NAME` in `.env`.
+1. To use the AI chat command, set `OPENAI_API_KEY` and `OPENAI_MODEL_NAME` in `.env`.
 
 ## Docker Compose
 
@@ -110,15 +110,3 @@ The list below only shows a subset of commands which I think need further explan
     1. `docker exec -it <container-name-or-id> /bin/bash`
     2. `./.venv/bin/gallery-dl oauth:pixiv`
     3. Follow the instructions given
-
-### `/connect_music`
-
-- Establish a new connection to the Lavalink server.
-
-  Use this command if the music player is not working while the Lavalink server is up.
-
-  Do NOT use this command while the bot is playing music!
-
-- Lavalink can be unstable (probably because YouTube changes their Innertube API often).
-
-  If the music player consistently produce errors, go to the Lavalink discord to check if there is a hotfix version of Lavalink.

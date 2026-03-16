@@ -2,6 +2,7 @@ import datetime as dt
 import logging
 import os
 import typing as ty
+import zoneinfo
 
 import discord
 import googleapiclient.discovery
@@ -32,7 +33,7 @@ class Subscription(CogBase):
         )
         self.check_subscription.start()
 
-    @tasks.loop(hours=1)
+    @tasks.loop(minutes=15)
     async def check_subscription(self) -> None:
         """Check for upcoming live of subscriptions.
 
@@ -42,14 +43,16 @@ class Subscription(CogBase):
             logger.debug("GOOGLE_API_KEY not set, skipping subscription check.")
             return
 
-        logger.info("Checking for new live streams...")
+        logger.debug("Checking for new live streams...")
 
         ISO_FORMAT = r"%Y-%m-%dT%H:%M:%SZ"
         MESSAGE_TEMPLATE = """{role_tag}
 # {title}
+## Scheduled Start Time
+{scheduled_start_time} 
+## Description
 {description}
-
-**Link:**
+## Link
 https://www.youtube.com/watch?v={video_id}"""
 
         async with self.sessionmaker() as session:
@@ -138,7 +141,7 @@ https://www.youtube.com/watch?v={video_id}"""
                                 # Not a scheduled stream or stream has already started
                                 continue
 
-                            logger.debug(
+                            logger.info(
                                 f"Sending notification of video title: `{video['snippet']['title']}` to {bot_channel.id}"
                             )
                             await bot_channel.send(
@@ -147,6 +150,19 @@ https://www.youtube.com/watch?v={video_id}"""
                                     if subscription.announcement_target
                                     else "@everyone",
                                     title=video["snippet"]["title"],
+                                    # HKT+8
+                                    scheduled_start_time=(
+                                        dt.datetime.fromisoformat(
+                                            video["liveStreamingDetails"][
+                                                "scheduledStartTime"
+                                            ].replace("Z", "+00:00")
+                                        ).replace(
+                                            tzinfo=zoneinfo.ZoneInfo(
+                                                key="Asia/Hong_Kong"
+                                            )
+                                        )
+                                        + dt.timedelta(hours=8)
+                                    ).strftime(r"%B %d (%A), %I:%M %p %Z"),
                                     description=video["snippet"]["description"],
                                     video_id=video["id"],
                                 )
