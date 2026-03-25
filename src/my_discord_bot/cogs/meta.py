@@ -153,34 +153,6 @@ class Meta(CogBase):
         await ia.response.send_message(resp)
 
     @discord.app_commands.command()
-    @discord.app_commands.describe(
-        number_of_days="Number of days from today",
-    )
-    async def get_log(self, ia: discord.Interaction, number_of_days: int = 0) -> None:
-        """(OWNER ONLY) Get log file."""
-        if not await self.bot.is_owner(ia.user):
-            await ia.response.send_message("Only the bot owner may use this command!")
-            return
-
-        try:
-            assert int(number_of_days) != 0
-            dateString = dt.date.strftime(
-                dt.date.today() + dt.timedelta(days=int(number_of_days)),
-                r".%Y-%m-%d",
-            )
-        except Exception:
-            dateString = ""
-
-        fileName = f"discord.log{dateString}"
-        link = Path(f"./volume/logs/{fileName}")
-        if link.is_file():
-            await ia.response.send_message(file=discord.File(link))
-        else:
-            await ia.response.send_message(
-                f"File {fileName} not found.",
-            )
-
-    @discord.app_commands.command()
     @discord.app_commands.guild_only()
     @discord.app_commands.checks.has_permissions(manage_channels=True)
     @discord.app_commands.describe(
