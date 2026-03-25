@@ -1092,7 +1092,7 @@ wheels = [
 
 [[package]]
 name = "my-discord-bot"
-version = "5.0.0"
+version = "5.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },

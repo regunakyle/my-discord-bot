@@ -36,6 +36,10 @@ class DiscordBot(commands.Bot):
 
         logger.info(f"Logged in as {self.user.name} ({str(self.user.id)}).")
 
+        # Use OpenAI API endpoint of OPENAI_BASE_URL is not set
+        if not len(os.getenv("OPENAI_BASE_URL", "")):
+            del os.environ["OPENAI_BASE_URL"]
+
         # Add all cogs
         for cog in cog_list:
             # Disable specific cogs if specific environment variables are not set
