@@ -47,8 +47,6 @@ class AI(CogBase):
                         "content": message,
                     },
                 ],
-                temperature=0.7,
-                max_tokens=2000,
             )
             .choices[0]
             .message.content
