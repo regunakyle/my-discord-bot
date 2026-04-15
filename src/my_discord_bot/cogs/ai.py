@@ -47,6 +47,7 @@ class AI(CogBase):
                         "content": message,
                     },
                 ],
+                extra_body={"chat_template_kwargs": {"enable_thinking": False}},
             )
             .choices[0]
             .message.content
