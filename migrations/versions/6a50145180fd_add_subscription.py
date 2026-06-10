@@ -1,8 +1,8 @@
 """Add subscription
 
-Revision ID: fec7b1c16b86
+Revision ID: 6a50145180fd
 Revises: 93832be8c5ae
-Create Date: 2025-10-21 01:55:05.679872
+Create Date: 2026-06-11 01:41:08.971231
 
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "fec7b1c16b86"
+revision: str = "6a50145180fd"
 down_revision: Union[str, None] = "93832be8c5ae"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -29,11 +29,17 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("guild_id", sa.Integer(), nullable=False),
-        sa.Column("youtube_channel_name", sa.Unicode(length=50), nullable=False),
-        sa.Column("youtube_channel_id", sa.Integer(), nullable=False),
+        sa.Column("youtube_channel_name", sa.Unicode(length=100), nullable=False),
+        sa.Column("youtube_channel_id", sa.String(length=50), nullable=False),
         sa.Column("youtube_upload_playlist", sa.String(length=50), nullable=False),
         sa.Column("announcement_target", sa.String(length=50), nullable=True),
         sa.Column("last_checked_at", sa.DateTime(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["guild_id"],
+            ["guild.id"],
+            name=op.f("fk_subscription_guild_id_guild"),
+            ondelete="CASCADE",
+        ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_subscription")),
         sa.UniqueConstraint(
             "youtube_channel_id", name=op.f("uq_subscription_youtube_channel_id")

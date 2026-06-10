@@ -22,8 +22,8 @@ class Subscription(ModelBase):
             ondelete="CASCADE",
         )
     )
-    youtube_channel_name: Mapped[str] = mapped_column(Unicode(50))
-    youtube_channel_id: Mapped[int] = mapped_column(unique=True)
+    youtube_channel_name: Mapped[str] = mapped_column(Unicode(100))
+    youtube_channel_id: Mapped[str] = mapped_column(String(50), unique=True)
     youtube_upload_playlist: Mapped[str] = mapped_column(String(50))
     announcement_target: Mapped[None | str] = mapped_column(String(50), default=None)
     last_checked_at: Mapped[dt.datetime] = mapped_column(
