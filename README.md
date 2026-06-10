@@ -58,15 +58,6 @@ Note: The `latest` tag refers to the latest stable version.
 2. Chat with AI (requires an OpenAI compatible API server, e.g. [tabbyAPI](https://github.com/theroyallab/tabbyAPI))
 3. A bunch of other commands I created for my needs...
 
-## TODO List
-
-- [ ] Bot commands:
-  - [ ] Music.play: Add Spotify support
-  - [ ] General.pixiv: Rewrite (refer to Phixiv implementation)
-  - [ ] AI.draw: Add [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui) support
-- [ ] Allow passing arguments to FFMPEG (for hardware acceleration)
-- [ ] Allow bot owner to run every command (including admin only commands)
-
 ## Notable commands
 
 **Please use `/help` to see the full list of commands!**

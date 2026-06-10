@@ -94,13 +94,6 @@ class DiscordBot(commands.Bot):
     async def on_member_join(self, member: discord.Member) -> None:
         """Called when a Member joins a Guild."""
 
-        # HKITHub podcast role auto assign
-        if member.guild.id == 1209882906735149126:
-            try:
-                await member.add_roles(member.guild.get_role(1398691229411315894))
-            except Exception as e:
-                logger.error(f"Failed to assign role: {e}")
-
         channel = member.guild.system_channel
         async with self.sessionmaker() as session:
             guild: Guild | None = (
@@ -115,7 +108,6 @@ class DiscordBot(commands.Bot):
             try:
                 await channel.send(f"<@{member.id}>\n{guild.welcome_message}")
             except Exception as e:
-                # TODO: Delete the welcome message if the message is malformed
                 logger.error(e)
 
     async def on_app_command_completion(

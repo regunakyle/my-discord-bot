@@ -48,9 +48,6 @@ class General(CogBase):
     ) -> None:
         """(RATE LIMITED) Upload an image from Pixiv. You may change the image number and/or animation format."""
 
-        # TODO: Rewrite based on Phixiv
-        # https://github.com/thelaao/phixiv
-
         match = re.compile(r"(www\.pixiv\.net\/(?:en\/)?artworks\/\d+)").search(
             pixiv_link
         )
@@ -61,7 +58,6 @@ class General(CogBase):
         # Delay response, maximum 15 mins
         await ia.response.defer()
 
-        # TODO: Add encoder config
         config.set(
             ("downloader",),
             "filesize-max",

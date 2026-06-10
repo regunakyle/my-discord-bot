@@ -49,7 +49,6 @@ class Meta(CogBase):
                 )
             )
 
-            # TODO: Optimize
             for guild in self.bot.guilds:
                 try:
                     await session.execute(
