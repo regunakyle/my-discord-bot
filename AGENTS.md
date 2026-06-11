@@ -140,7 +140,6 @@ Key details:
 - Uses `gallery-dl` library directly (config + `DownloadJob`)
 - Max file size respects guild Nitro level + `MAX_FILE_SIZE` env var
 - Defer response (up to 15 min processing time)
-- **TODO**: Rewrite using Phixiv
 
 ### Meta (`meta.py`)
 
@@ -165,7 +164,6 @@ Key details:
 - Base URL from `OPENAI_BASE_URL` env var (if empty, uses official OpenAI endpoint; the env var is deleted in `setup_hook` if empty)
 - Uses `client.responses.create()` API with a `brave_search` function tool
 - Response truncated to 2000 chars per message (splits into multiple messages if longer)
-- **TODO**: Stream responses instead of sending full message at once
 
 ### Music (`music.py`)
 
@@ -186,7 +184,6 @@ Key details:
 - Background task `leave_inactive_voice_channel_task` (1-min loop): disconnects if no non-bot users in voice channel
 - Event hooks: `TrackStartEvent`, `QueueEndEvent`, `TrackLoadFailedEvent`, `NodeReadyEvent`, `NodeDisconnectedEvent`
 - Query prefix `ytsearch:` auto-added for non-URL queries
-- **TODO**: Add Spotify support, pagination for queue
 
 ### Subscription (`subscription.py`)
 
@@ -201,7 +198,6 @@ Key details:
 - Timezone conversion: UTC → Asia/Hong_Kong (UTC+8)
 - `last_checked_at` prevents re-notifying for already-seen videos
 - Announcement pings `target_role_id` or `@everyone` if not specified
-- **TODO**: Handle `pageToken` for playlists with >50 videos, handle connection failures
 
 ---
 
