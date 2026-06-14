@@ -52,7 +52,7 @@ class General(CogBase):
             pixiv_link
         )
         if not match:
-            await ia.response.send_message("You link is invalid!")
+            await ia.response.send_message("ERROR: Not a valid URL!")
             return
 
         # Delay response, maximum 15 mins
@@ -94,9 +94,9 @@ class General(CogBase):
 
             if not link.is_file():
                 await ia.followup.send(
-                    "Something went wrong."
+                    "ERROR: Something went wrong."
                     + (
-                        " Maybe your image_number is out of range?"
+                        " Maybe your image_number is incorrect?"
                         if image_number > 1
                         else ""
                     )
@@ -117,24 +117,24 @@ class General(CogBase):
                 case 4:
                     # HttpError: Most probably because the image is too big
                     await ia.followup.send(
-                        "Download failed. Most probably because your image is too big. (Maximum size: {size}MiB)".format(
+                        "ERROR: Download failed. Most probably because your image is too big. (Maximum size: {size}MiB)".format(
                             size=self.get_max_file_size(ia.guild)
                         )
                     )
                     return
                 case 8:
                     # NotFoundError: Invalid link
-                    await ia.followup.send("You link is invalid!")
+                    await ia.followup.send("ERROR: You link is invalid!")
                     return
                 case 16:
                     # AuthenticationError: No token provided
                     await ia.followup.send(
-                        "Cannot login to Pixiv. Please notify the bot owner! \nTo the bot owner: Please find instructions in https://github.com/regunakyle/my-discord-bot#important-you-must-have-ffmepg-installed-and-setup-an-oauth-token-to-use-this-command"
+                        "ERROR: Cannot login to Pixiv. Please notify the bot owner! \nTo the bot owner: Please find instructions in https://github.com/regunakyle/my-discord-bot#important-you-must-have-ffmepg-installed-and-setup-an-oauth-token-to-use-this-command"
                     )
                     return
                 case _:
                     logger.error(f"Gallery-DL failed. Status code: {download.status}")
                     await ia.followup.send(
-                        "Something went wrong. Please notify the bot owner if the error persists."
+                        "ERROR: Something went wrong. Please notify the bot owner if the error persists."
                     )
                     return

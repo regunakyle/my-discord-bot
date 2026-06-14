@@ -120,36 +120,68 @@ class Meta(CogBase):
     @discord.app_commands.command()
     @discord.app_commands.checks.has_permissions(manage_channels=True)
     @discord.app_commands.guild_only()
-    async def set_bot_channel(self, ia: discord.Interaction) -> None:
-        """(ADMIN) Mark (or unmark) the current channel as the subscription channel."""
-        resp = "Bot channel unset."
-        async with self.sessionmaker() as session:
-            if (
+    @discord.app_commands.describe(
+        channel="Channel to be set as the bot channel. Ignored if unset is true.",
+        unset="If true, unsets the bot channel.",
+    )
+    async def set_bot_channel(
+        self,
+        ia: discord.Interaction,
+        channel: discord.app_commands.AppCommandChannel | None = None,
+        unset: bool = False,
+    ) -> None:
+        """(ADMIN) Set or unset the subscription notification channel."""
+
+        if unset:
+            async with self.sessionmaker() as session:
                 await session.execute(
                     update(Guild)
                     .where(Guild.guild_id == ia.guild.id)
-                    .where(Guild.bot_channel == ia.channel.id)
                     .values(bot_channel=None)
                 )
-            ).rowcount == 0:
-                resp = f"Bot channel set to <#{ia.channel.id}>."
+                await session.commit()
+            await ia.response.send_message("Bot channel unset.")
+            return
 
+        # Handle explicit channel
+        if channel is not None:
+            try:
+                guild_channel = await channel.fetch()
+            except discord.Forbidden:
+                await ia.response.send_message(
+                    "ERROR: The bot does not have permission to view that channel."
+                )
+                return
+
+            if not guild_channel.permissions_for(ia.guild.me).send_messages:
+                await ia.response.send_message(
+                    "ERROR: The bot needs to have write access to that channel."
+                )
+                return
+
+            resp = f"Bot channel set to <#{channel.id}>."
+            async with self.sessionmaker() as session:
                 if (
                     await session.execute(
                         update(Guild)
                         .where(Guild.guild_id == ia.guild.id)
-                        .values(bot_channel=ia.channel.id)
+                        .values(bot_channel=channel.id)
                     )
                 ).rowcount == 0:
                     session.add(
                         Guild(
                             guild_id=ia.guild.id,
                             guild_name=ia.guild.name,
-                            bot_channel=ia.channel.id,
+                            bot_channel=channel.id,
                         )
                     )
-            await session.commit()
-        await ia.response.send_message(resp)
+                await session.commit()
+            await ia.response.send_message(resp)
+            return
+
+        await ia.response.send_message(
+            "No action taken. Please use one of the parameters."
+        )
 
     @discord.app_commands.command()
     @discord.app_commands.guild_only()
@@ -166,7 +198,9 @@ class Meta(CogBase):
         # User: <@UserID>
         # Emote: <a:EmoteName:EmoteID>
         if len(message) > 2000:
-            await ia.response.send_message("Your message is too long!")
+            await ia.response.send_message(
+                "ERROR: Your message is too long! Maximum 2000 characters allowed."
+            )
             return
 
         resp = ""
@@ -237,7 +271,7 @@ class Meta(CogBase):
                     )
                 except KeyError:
                     await ia.response.send_message(
-                        "Version not found in pyproject.toml!"
+                        "ERROR: Version not found in pyproject.toml!"
                     )
         else:
-            await ia.response.send_message("Version not found!")
+            await ia.response.send_message("ERROR: Version not found!")

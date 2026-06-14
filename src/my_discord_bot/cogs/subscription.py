@@ -221,7 +221,9 @@ https://www.youtube.com/watch?v={video_id}"""
             )
 
             if not guild.bot_channel:
-                await ia.followup.send("Bot channel not set. Use `/set_bot_channel`.")
+                await ia.followup.send(
+                    "ERROR: Bot channel not set. Use `/set_bot_channel` first."
+                )
                 return
 
             if guild.subscriptions:
@@ -241,7 +243,7 @@ https://www.youtube.com/watch?v={video_id}"""
             )
 
             if "items" not in channel:
-                await ia.followup.send("Invalid YouTube channel ID")
+                await ia.followup.send("ERROR: Invalid YouTube channel ID")
                 return
 
             if (
@@ -249,7 +251,7 @@ https://www.youtube.com/watch?v={video_id}"""
                 or "snippet" not in channel["items"][0]
             ):
                 await ia.followup.send(
-                    "Failed: Cannot find enough information for this Youtube channel."
+                    "ERROR: Cannot find enough information for this Youtube channel."
                 )
                 return
 
