@@ -52,7 +52,10 @@ class General(CogBase):
             pixiv_link
         )
         if not match:
-            await ia.response.send_message("ERROR: Not a valid URL!")
+            await ia.response.send_message(
+                "ERROR: Not a valid URL!",
+                ephemeral=True,
+            )
             return
 
         # Delay response, maximum 15 mins
@@ -99,7 +102,8 @@ class General(CogBase):
                         " Maybe your image_number is incorrect?"
                         if image_number > 1
                         else ""
-                    )
+                    ),
+                    ephemeral=True,
                 )
                 return
 
@@ -119,22 +123,28 @@ class General(CogBase):
                     await ia.followup.send(
                         "ERROR: Download failed. Most probably because your image is too big. (Maximum size: {size}MiB)".format(
                             size=self.get_max_file_size(ia.guild)
-                        )
+                        ),
+                        ephemeral=True,
                     )
                     return
                 case 8:
                     # NotFoundError: Invalid link
-                    await ia.followup.send("ERROR: You link is invalid!")
+                    await ia.followup.send(
+                        "ERROR: You link is invalid!",
+                        ephemeral=True,
+                    )
                     return
                 case 16:
                     # AuthenticationError: No token provided
                     await ia.followup.send(
-                        "ERROR: Cannot login to Pixiv. Please notify the bot owner! \nTo the bot owner: Please find instructions in https://github.com/regunakyle/my-discord-bot#important-you-must-have-ffmepg-installed-and-setup-an-oauth-token-to-use-this-command"
+                        "ERROR: Cannot login to Pixiv. Please notify the bot owner! \nTo the bot owner: Please find instructions in https://github.com/regunakyle/my-discord-bot#important-you-must-have-ffmepg-installed-and-setup-an-oauth-token-to-use-this-command",
+                        ephemeral=True,
                     )
                     return
                 case _:
                     logger.error(f"Gallery-DL failed. Status code: {download.status}")
                     await ia.followup.send(
-                        "ERROR: Something went wrong. Please notify the bot owner if the error persists."
+                        "ERROR: Something went wrong. Please notify the bot owner if the error persists.",
+                        ephemeral=True,
                     )
                     return

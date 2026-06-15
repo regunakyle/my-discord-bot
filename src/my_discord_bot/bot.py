@@ -54,6 +54,11 @@ class DiscordBot(commands.Bot):
                 os.getenv("GOOGLE_API_KEY", "")
             ):
                 continue
+            if cog.__name__ == "Translation" and not (
+                len(os.getenv("OPENAI_API_KEY", ""))
+                and len(os.getenv("OPENAI_MODEL_NAME", ""))
+            ):
+                continue
 
             await self.add_cog(cog(self, self.sessionmaker))
 

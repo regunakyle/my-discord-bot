@@ -332,7 +332,8 @@ class Music(CogBase):
         #   ERROR    - the track encountered an exception during loading
         if results.load_type == LoadType.EMPTY:
             return await ia.followup.send(
-                "ERROR: Cannot find any tracks for that query."
+                "ERROR: Cannot find any tracks with that query.",
+                ephemeral=True,
             )
         elif results.load_type == LoadType.PLAYLIST:
             tracks = results.tracks

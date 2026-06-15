@@ -4,6 +4,7 @@ from .general import General
 from .meta import Meta
 from .music import Music
 from .subscription import Subscription
+from .translation import Translation
 
 cog_list = [
     ErrorHandler,
@@ -12,6 +13,7 @@ cog_list = [
     AI,
     Subscription,
     Music,
+    Translation,
 ]
 
 __all__ = (
@@ -22,4 +24,5 @@ __all__ = (
     "cog_list",
     "Subscription",
     "Music",
+    "Translation",
 )

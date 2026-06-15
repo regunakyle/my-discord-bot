@@ -149,13 +149,15 @@ class Meta(CogBase):
                 guild_channel = await channel.fetch()
             except discord.Forbidden:
                 await ia.response.send_message(
-                    "ERROR: The bot does not have permission to view that channel."
+                    "ERROR: The bot does not have permission to view that channel.",
+                    ephemeral=True,
                 )
                 return
 
             if not guild_channel.permissions_for(ia.guild.me).send_messages:
                 await ia.response.send_message(
-                    "ERROR: The bot needs to have write access to that channel."
+                    "ERROR: The bot needs to have write access to that channel.",
+                    ephemeral=True,
                 )
                 return
 
@@ -199,7 +201,8 @@ class Meta(CogBase):
         # Emote: <a:EmoteName:EmoteID>
         if len(message) > 2000:
             await ia.response.send_message(
-                "ERROR: Your message is too long! Maximum 2000 characters allowed."
+                "ERROR: Your message is too long! Maximum 2000 characters allowed.",
+                ephemeral=True,
             )
             return
 
@@ -271,7 +274,11 @@ class Meta(CogBase):
                     )
                 except KeyError:
                     await ia.response.send_message(
-                        "ERROR: Version not found in pyproject.toml!"
+                        "ERROR: Version not found in pyproject.toml!",
+                        ephemeral=True,
                     )
         else:
-            await ia.response.send_message("ERROR: Version not found!")
+            await ia.response.send_message(
+                "ERROR: Version not found!",
+                ephemeral=True,
+            )
