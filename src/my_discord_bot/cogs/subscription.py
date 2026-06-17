@@ -11,6 +11,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import joinedload
 
+from ..exceptions import GuildNotFoundError
 from ..models import Guild
 from ..models import Subscription as Sub
 from ._cog_base import CogBase
@@ -93,7 +94,7 @@ https://www.youtube.com/watch?v={video_id}"""
                         logger.info(
                             f"No video found for channel id {subscription.youtube_channel_id}"
                         )
-                        break
+                        continue
 
                     for item in playlist_items["items"]:
                         if (
@@ -217,8 +218,11 @@ https://www.youtube.com/watch?v={video_id}"""
                     )
                 )
                 .unique()
-                .scalar_one()
+                .scalar_one_or_none()
             )
+
+            if guild is None:
+                raise GuildNotFoundError(ia.guild)
 
             if not guild.bot_channel:
                 await ia.followup.send(

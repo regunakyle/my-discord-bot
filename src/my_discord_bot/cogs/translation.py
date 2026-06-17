@@ -5,11 +5,12 @@ import typing as ty
 import aiohttp
 import discord
 from discord.ext import commands
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import joinedload
 
+from ..exceptions import GuildNotFoundError
 from ..models import Guild
 from ..models import Translation as tl_model
 from ._cog_base import CogBase
@@ -59,12 +60,8 @@ class Translation(CogBase):
                 )
             ).scalar_one_or_none()
 
-            if not guild_row:
-                await ia.response.send_message(
-                    "ERROR: Guild not found in database!",
-                    ephemeral=True,
-                )
-                return
+            if guild_row is None:
+                raise GuildNotFoundError(ia.guild)
 
             if guild_row.translation is not None:
                 guild_row.translation.trigger_emote = emote
@@ -81,7 +78,7 @@ class Translation(CogBase):
                 await session.commit()
             except IntegrityError as e:
                 await session.rollback()
-                logger.error("Integrity error in translation_setup:", exc_info=e)
+                logger.error("Integrity error in translation_setup:", e)
                 await ia.response.send_message(
                     "ERROR: Failed to save configuration. Please try again.",
                     ephemeral=True,
@@ -109,12 +106,8 @@ class Translation(CogBase):
                 )
             ).scalar_one_or_none()
 
-            if not guild_row:
-                await ia.response.send_message(
-                    "ERROR: Guild not found in database!",
-                    ephemeral=True,
-                )
-                return
+            if guild_row is None:
+                raise GuildNotFoundError(ia.guild)
 
             translation = guild_row.translation
 
@@ -150,12 +143,8 @@ class Translation(CogBase):
                 )
             ).scalar_one_or_none()
 
-            if not guild_row:
-                await ia.response.send_message(
-                    "ERROR: Guild not found in database!",
-                    ephemeral=True,
-                )
-                return
+            if guild_row is None:
+                raise GuildNotFoundError(ia.guild)
 
             if guild_row.translation is not None:
                 await session.delete(guild_row.translation)

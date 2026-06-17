@@ -1,4 +1,3 @@
-import datetime as dt
 import logging
 import os
 import tomllib
@@ -10,6 +9,7 @@ from discord.ext import commands
 from sqlalchemy import delete, insert, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from ..exceptions import GuildNotFoundError
 from ..models import Guild
 from ._cog_base import CogBase
 
@@ -170,13 +170,7 @@ class Meta(CogBase):
                         .values(bot_channel=channel.id)
                     )
                 ).rowcount == 0:
-                    session.add(
-                        Guild(
-                            guild_id=ia.guild.id,
-                            guild_name=ia.guild.name,
-                            bot_channel=channel.id,
-                        )
-                    )
+                    raise GuildNotFoundError(ia.guild)
                 await session.commit()
             await ia.response.send_message(resp)
             return
@@ -229,13 +223,7 @@ class Meta(CogBase):
                         .values(welcome_message=unescaped_msg)
                     )
                 ).rowcount == 0:
-                    session.add(
-                        Guild(
-                            guild_id=ia.guild.id,
-                            guild_name=ia.guild.name,
-                            welcome_message=unescaped_msg,
-                        )
-                    )
+                    raise GuildNotFoundError(ia.guild)
 
             await session.commit()
         await ia.response.send_message(resp)

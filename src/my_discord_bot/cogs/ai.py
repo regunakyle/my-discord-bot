@@ -19,8 +19,6 @@ class AI(CogBase):
         self, bot: commands.Bot, sessionmaker: async_sessionmaker[AsyncSession]
     ) -> None:
         super().__init__(bot, sessionmaker)
-        self.client = openai.OpenAI()
-        self.model_name = os.getenv("OPENAI_MODEL_NAME", "")
 
     @discord.app_commands.command()
     @discord.app_commands.checks.dynamic_cooldown(check_cooldown_factory(1.5))
@@ -38,23 +36,14 @@ class AI(CogBase):
 
         await ia.response.defer()
 
-        message = (
-            self.client.chat.completions.create(
-                model=self.model_name,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": message,
-                    },
-                ],
-                extra_body={"chat_template_kwargs": {"enable_thinking": False}},
-            )
-            .choices[0]
-            .message.content
-        )
+        resp = await self.call_openai([{"role": "user", "content": message}])
 
-        await ia.followup.send(message[:2000])
+        if resp is None:
+            await ia.followup.send("ERROR: OpenAI API call failed.")
+            return
 
-        if len(message) > 2000:
-            for split in range(1, math.ceil(len(message) / 2000)):
-                await ia.followup.send(message[2000 * split : 2000 * (split + 1)])
+        await ia.followup.send(resp[:2000])
+
+        if len(resp) > 2000:
+            for split in range(1, math.ceil(len(resp) / 2000)):
+                await ia.followup.send(resp[2000 * split : 2000 * (split + 1)])
