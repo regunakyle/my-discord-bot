@@ -50,7 +50,7 @@ class Subscription(CogBase):
         MESSAGE_TEMPLATE = """{role_tag}
 # {title}
 ## Scheduled Start Time
-{scheduled_start_time} 
+<t:{unix_timestamp}:F>
 ## Description
 {description}
 ## Link
@@ -152,18 +152,13 @@ https://www.youtube.com/watch?v={video_id}"""
                                     else "@everyone",
                                     title=video["snippet"]["title"],
                                     # HKT+8
-                                    scheduled_start_time=(
+                                    unix_timestamp=int(
                                         dt.datetime.fromisoformat(
                                             video["liveStreamingDetails"][
                                                 "scheduledStartTime"
                                             ].replace("Z", "+00:00")
-                                        ).replace(
-                                            tzinfo=zoneinfo.ZoneInfo(
-                                                key="Asia/Hong_Kong"
-                                            )
-                                        )
-                                        + dt.timedelta(hours=8)
-                                    ).strftime(r"%B %d (%A), %I:%M %p %Z"),
+                                        ).timestamp()
+                                    ),
                                     description=video["snippet"]["description"],
                                     video_id=video["id"],
                                 )
