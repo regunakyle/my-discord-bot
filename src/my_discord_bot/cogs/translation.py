@@ -2,6 +2,7 @@ import asyncio
 import io
 import logging
 import typing as ty
+import uuid
 
 import aiohttp
 import discord
@@ -32,101 +33,87 @@ class Translation(CogBase):
         self,
         target_channel: discord.abc.Messageable,
         openai_messages: list[dict[str, str]],
-        embed_author: str,
+        header: str,
         *,
-        extra_embeds: list[discord.Embed] | None = None,
         files: list[discord.File] | None = None,
     ) -> None:
         """Stream a translation into target_channel, splitting across reply messages if needed.
 
-        Sends an initial embed with the author header, then edits in real-time as chunks arrive.
+        Sends an initial plain-text message with the header, then edits in real-time as chunks arrive.
         When the text exceeds 2000 characters, a new reply message is created for the next block.
         """
-        DISCORD_MAX_MESSAGE_LENGTH = 2000
-        STREAM_EDIT_INTERVAL = 1.0
+
+        logger.debug("Starting translation stream, header=%s", header)
 
         # Initial "Translating..." message
-        embed = discord.Embed(description="Translating...")
-        embed.set_author(name=embed_author)
-
-        if extra_embeds is not None:
-            all_embeds = [embed] + extra_embeds
-        else:
-            all_embeds = [embed]
-
+        initial_content = f"{header}\nTranslating..."
         current_message = await ty.cast(
             discord.abc.Messageable,
             target_channel,
-        ).send(embeds=all_embeds, files=files)
+        ).send(initial_content, files=files)
 
         full_text = ""
-        last_edit_time = asyncio.get_event_loop().time()
+        last_edit_time = asyncio.get_running_loop().time()
         current_block = 0
+        # Each block carries the header, so reserve that space from the limit
+        header_overhead = len(header) + 1  # +1 for the "\n"
+        available_length = DISCORD_MAX_MESSAGE_LENGTH - header_overhead
+
+        def _build_content(text: str) -> str:
+            return f"{header}\n{text}"
 
         try:
             async for chunk in self.call_openai_stream(openai_messages):
                 full_text += chunk
 
-                # Check if we've crossed into a new 2000-char block
-                new_block = len(full_text) // DISCORD_MAX_MESSAGE_LENGTH
+                # Check if we've crossed into a new block
+                new_block = len(full_text) // available_length
                 if new_block > current_block:
-                    # Finalize the current block on the active message
-                    block_start = current_block * DISCORD_MAX_MESSAGE_LENGTH
-                    block_text = full_text[
-                        block_start : block_start + DISCORD_MAX_MESSAGE_LENGTH
-                    ]
-                    current_embed = current_message.embeds[0].copy()
-                    current_embed.description = block_text
-                    await current_message.edit(
-                        embeds=[current_embed] + current_message.embeds[1:]
+                    logger.debug(
+                        "Crossed block boundary: block %d -> %d",
+                        current_block,
+                        new_block,
                     )
+                    # Finalize the current block on the active message
+                    block_start = current_block * available_length
+                    block_text = full_text[block_start : block_start + available_length]
+                    await current_message.edit(content=_build_content(block_text))
 
-                    # Send a new reply message for the next block
-                    reply_embed = discord.Embed(description="Loading...")
-                    reply_embed.set_author(name=embed_author)
+                    # Send a new reply message for the next block (also with header)
                     current_message = await ty.cast(
                         discord.abc.Messageable,
                         target_channel,
                     ).send(
-                        embeds=[reply_embed],
+                        _build_content("Loading..."),
                         message_reference=current_message,
                     )
                     current_block = new_block
 
-                now = asyncio.get_event_loop().time()
+                now = asyncio.get_running_loop().time()
                 if now - last_edit_time >= STREAM_EDIT_INTERVAL:
-                    block_start = current_block * DISCORD_MAX_MESSAGE_LENGTH
-                    block_text = full_text[
-                        block_start : block_start + DISCORD_MAX_MESSAGE_LENGTH
-                    ]
-                    current_embed = current_message.embeds[0].copy()
-                    current_embed.description = block_text
-                    await current_message.edit(
-                        embeds=[current_embed] + current_message.embeds[1:]
-                    )
+                    block_start = current_block * available_length
+                    block_text = full_text[block_start : block_start + available_length]
+                    await current_message.edit(content=_build_content(block_text))
                     last_edit_time = now
         except Exception:
-            pass
+            logger.error("Error during translation", exc_info=True)
 
         # Final edit with the complete text for the last block
+        logger.debug(
+            "Stream complete, total length=%d, blocks=%d",
+            len(full_text),
+            current_block + 1,
+        )
         if full_text:
-            block_start = current_block * DISCORD_MAX_MESSAGE_LENGTH
-            block_text = full_text[
-                block_start : block_start + DISCORD_MAX_MESSAGE_LENGTH
-            ]
-            current_embed = current_message.embeds[0].copy()
-            current_embed.description = block_text
-            await current_message.edit(
-                embeds=[current_embed] + current_message.embeds[1:]
-            )
+            block_start = current_block * available_length
+            block_text = full_text[block_start : block_start + available_length]
+            await current_message.edit(content=_build_content(block_text))
         else:
-            current_embed = current_message.embeds[0].copy()
-            current_embed.description = "Translation failed. Please try again later."
             await current_message.edit(
-                embeds=[current_embed] + current_message.embeds[1:]
+                content=f"{header}\nTranslation failed. Please try again later."
             )
 
-    async def _get_translation(self, guild: discord.Guild) -> ty.Optional[tl_model]:
+    async def _get_translation(self, guild: discord.Guild) -> tl_model | None:
         """Fetch the Translation row for a guild via the relationship."""
         async with self.sessionmaker() as session:
             guild_row = (
@@ -187,6 +174,13 @@ class Translation(CogBase):
             target_language = "Traditional Chinese"
             target_channel_id = translation.chinese_channel_id
 
+        logger.debug(
+            "on_reaction_add: translating %s -> %s, channel %s",
+            source_channel.name,
+            target_language,
+            target_channel_id,
+        )
+
         target_channel = reaction.message.guild.get_channel(target_channel_id)
         if target_channel is None or not isinstance(
             target_channel, discord.abc.Messageable
@@ -210,15 +204,16 @@ class Translation(CogBase):
                             )
                 except Exception as e:
                     logger.error(f"Failed to download attachment: {e}")
+        logger.debug("on_reaction_add: collected %d attachments", len(files))
 
-        # Compose message header
-        author_name = reaction.message.author.display_name
-        source_name = source_channel.name
-        header = f"[TRANSLATION] forwarded from #{source_name} by {author_name}"
+        # Compose message header with a unique chain ID
+        chain_id = uuid.uuid4().hex[:8]
+        header = f"[TRANSLATION] {chain_id}"
 
         # Build translated message
         text = reaction.message.content
         if text:
+            logger.debug("on_reaction_add: translating text (%d chars)", len(text))
             messages = [
                 {
                     "role": "system",
@@ -239,13 +234,11 @@ class Translation(CogBase):
             except discord.HTTPException as e:
                 logger.error(f"Failed to send translation: {e}")
         else:
+            logger.debug("on_reaction_add: forwarding message as-is (empty text)")
             # Empty text (embed/attachment only) — forward as-is
-            embed = discord.Embed(description="*(forwarded as-is)*")
-            embed.set_author(name=header)
-            all_embeds = [embed] + reaction.message.embeds
             try:
                 await ty.cast(discord.abc.Messageable, target_channel).send(
-                    embeds=all_embeds,
+                    f"{header}\n*(forwarded as-is)*",
                     files=files,
                 )
             except discord.HTTPException as e:
@@ -267,9 +260,14 @@ class Translation(CogBase):
         if not resolved.author.bot:
             return
 
-        # Check for [TRANSLATION] flag
-        if not resolved.content.startswith("[TRANSLATION]"):
+        # Check for [TRANSLATION] flag and extract chain ID
+        first_line = resolved.content.split("\n")[0]
+        if not first_line.startswith("[TRANSLATION] "):
             return
+        chain_id = first_line[len("[TRANSLATION] ") :].strip()
+        if not chain_id:
+            return
+        logger.debug("on_message: matched chain %s", chain_id)
 
         # Load config
         translation = await self._get_translation(message.guild)
@@ -315,14 +313,20 @@ class Translation(CogBase):
                             )
                 except Exception as e:
                     logger.error(f"Failed to download attachment: {e}")
+        logger.debug("on_message: collected %d attachments", len(files))
 
-        # Compose message header
-        author_name = message.author.display_name
-        source_name = source_channel.name
-        header = f"[TRANSLATION] forwarded from #{source_name} by {author_name}"
+        # Compose message header (reuse the same chain ID)
+        header = f"[TRANSLATION] {chain_id}"
 
         # Translate
         text = message.content
+        logger.debug(
+            "on_message: translating %s -> %s, channel %s (%d chars)",
+            source_channel.name,
+            target_language,
+            target_channel_id,
+            len(text),
+        )
         messages = [
             {
                 "role": "system",

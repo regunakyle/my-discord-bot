@@ -77,7 +77,7 @@ class AI(CogBase):
                     last_edit_time = now
         except Exception:
             # If streaming failed mid-way, fall through to send whatever we have
-            pass
+            logger.error("Error during chat", exc_info=True)
 
         # Final edit with the complete text for the last block
         logger.debug(
