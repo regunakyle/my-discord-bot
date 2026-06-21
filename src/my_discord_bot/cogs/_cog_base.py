@@ -35,7 +35,17 @@ class CogBase(commands.Cog):
         self.sessionmaker = sessionmaker
 
         self.model_name = os.getenv("OPENAI_MODEL_NAME", "")
+        try:
+            self.max_file_size = abs(int(os.getenv("MAX_FILE_SIZE", "25")))
+        except Exception:
+            self.max_file_size = 25
+
         self.client = openai.AsyncOpenAI()
+        logger.debug(
+            "CogBase init: model=%s max_file_size=%d",
+            self.model_name,
+            self.max_file_size,
+        )
 
     def get_max_file_size(
         self,
@@ -57,10 +67,16 @@ class CogBase(commands.Cog):
         elif nitroCount < 14:  # Level 2
             maxSize = 50
 
-        try:
-            return min(maxSize, abs(int(os.getenv("MAX_FILE_SIZE", "25"))))
-        except Exception:
-            return maxSize
+        result = min(maxSize, self.max_file_size)
+        logger.debug(
+            "get_max_file_size: guild=%s nitro=%d maxSize=%d env=%d result=%d",
+            guild.name if guild else None,
+            nitroCount,
+            maxSize,
+            self.max_file_size,
+            result,
+        )
+        return result
 
     async def call_openai_stream(
         self,

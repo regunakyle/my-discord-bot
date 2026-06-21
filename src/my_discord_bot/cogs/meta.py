@@ -38,10 +38,12 @@ class Meta(CogBase):
             return
 
         synced = await self.bot.tree.sync()
+        logger.info("sync: synced %d commands globally", len(synced))
 
         await ctx.send(f"Synced {len(synced)} commands globally.")
 
         # Sync database with joined guilds
+        logger.info("sync: syncing %d guilds to database", len(self.bot.guilds))
         async with self.sessionmaker() as session:
             await session.execute(
                 delete(Guild).where(
@@ -58,6 +60,7 @@ class Meta(CogBase):
                     pass
 
             await session.commit()
+            logger.info("sync: guild database synced successfully")
 
     @discord.app_commands.command()
     @discord.app_commands.describe(
@@ -140,6 +143,7 @@ class Meta(CogBase):
                     .values(bot_channel=None)
                 )
                 await session.commit()
+            logger.debug("set_bot_channel: unset guild=%s", ia.guild.name)
             await ia.response.send_message("Bot channel unset.")
             return
 
@@ -172,6 +176,9 @@ class Meta(CogBase):
                 ).rowcount == 0:
                     raise GuildNotFoundError(ia.guild)
                 await session.commit()
+            logger.debug(
+                "set_bot_channel: set channel=%s guild=%s", channel.id, ia.guild.name
+            )
             await ia.response.send_message(resp)
             return
 
@@ -226,6 +233,8 @@ class Meta(CogBase):
                     raise GuildNotFoundError(ia.guild)
 
             await session.commit()
+            logger.debug("set_welcome_message: committed guild=%s", ia.guild.name)
+
         await ia.response.send_message(resp)
 
     @discord.app_commands.command()
@@ -240,6 +249,7 @@ class Meta(CogBase):
         version_template = "Current bot version: {version}"
 
         if os.getenv("APP_VERSION"):
+            logger.debug("version: using APP_VERSION=%s", os.getenv("APP_VERSION"))
             await ia.response.send_message(
                 version_template.format(version=os.getenv("APP_VERSION"))
             )
@@ -247,6 +257,11 @@ class Meta(CogBase):
             git.exists()
             and (repo := pygit2.Repository(str(git))).head.shorthand != "master"
         ):
+            logger.debug(
+                "version: using git branch=%s commit=%s",
+                repo.head.shorthand,
+                repo.revparse("HEAD").from_object.short_id,
+            )
             await ia.response.send_message(
                 version_template.format(
                     version=f"{repo.head.shorthand}-{repo.revparse('HEAD').from_object.short_id}"
@@ -255,10 +270,10 @@ class Meta(CogBase):
         elif pyproject.exists():
             with open(pyproject, "rb") as toml:
                 try:
+                    version = tomllib.load(toml)["project"]["version"]
+                    logger.debug("version: using pyproject.toml version=%s", version)
                     await ia.response.send_message(
-                        version_template.format(
-                            version=tomllib.load(toml)["project"]["version"]
-                        )
+                        version_template.format(version=version)
                     )
                 except KeyError:
                     await ia.response.send_message(

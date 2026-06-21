@@ -41,6 +41,13 @@ async def create_player_check(ia: discord.Interaction[Client]) -> ty.Literal[Tru
     if ia.guild is None:
         raise app_commands.NoPrivateMessage()
 
+    logger.debug(
+        "create_player_check: guild=%s user=%s command=%s",
+        ia.guild.name,
+        ia.user,
+        ia.command.name,
+    )
+
     player = ty.cast(
         lavalink.Client[DefaultPlayer], ia.client.lavalink
     ).player_manager.create(ia.guild.id)
@@ -80,6 +87,11 @@ async def create_player_check(ia: discord.Interaction[Client]) -> ty.Literal[Tru
                 raise Exception("Your voice channel is full!")
 
         player.store("channel", ia.channel.id)
+        logger.debug(
+            "create_player_check: connecting to voice channel %s in guild %s",
+            voice_channel.name,
+            ia.guild.name,
+        )
         await ia.user.voice.channel.connect(cls=LavalinkVoiceClient)
 
     elif voice_client.channel.id != voice_channel.id:
@@ -154,6 +166,11 @@ class LavalinkVoiceClient(discord.VoiceProtocol):
 
         # ensure there is a player_manager when creating a new voice_client
         self.lavalink.player_manager.create(guild_id=self.channel.guild.id)
+        logger.debug(
+            "LavalinkVoiceClient.connect: guild=%s channel=%s",
+            self.channel.guild.name,
+            self.channel.name,
+        )
         await self.channel.guild.change_voice_state(
             channel=self.channel, self_mute=self_mute, self_deaf=self_deaf
         )
@@ -168,8 +185,16 @@ class LavalinkVoiceClient(discord.VoiceProtocol):
 
         # no need to disconnect if we are not connected
         if not force and not player.is_connected:
+            logger.debug(
+                "LavalinkVoiceClient.disconnect: not connected, skipping (force=%s)",
+                force,
+            )
             return
 
+        logger.debug(
+            "LavalinkVoiceClient.disconnect: guild=%s",
+            self.channel.guild.name,
+        )
         # None means disconnect
         await self.channel.guild.change_voice_state(channel=None)
 
@@ -236,10 +261,21 @@ class Music(CogBase):
         for vc in self.bot.voice_clients:
             vc: LavalinkVoiceClient
 
-            for member in vc.channel.members:
-                if not member.bot:
-                    return
+            non_bot_members = [m for m in vc.channel.members if not m.bot]
+            if non_bot_members:
+                logger.debug(
+                    "leave_inactive: guild=%s channel=%s has %d non-bot members, keeping",
+                    vc.channel.guild.name,
+                    vc.channel.name,
+                    len(non_bot_members),
+                )
+                return
 
+            logger.debug(
+                "leave_inactive: guild=%s channel=%s is empty, disconnecting",
+                vc.channel.guild.name,
+                vc.channel.name,
+            )
             await vc.channel.send("Quitting because I am alone...")
             await vc.disconnect()
 
@@ -255,7 +291,17 @@ class Music(CogBase):
         channel_id = event.player.channel_id
         guild = self.bot.get_guild(guild_id)
 
+        logger.debug(
+            "on_track_start: guild=%s track=%s by %s",
+            guild_id,
+            event.track.title,
+            event.track.author,
+        )
+
         if not guild:
+            logger.warning(
+                "on_track_start: guild %s not found, destroying player", guild_id
+            )
             return await self.lavalink.player_manager.destroy(guild_id)
 
         channel = guild.get_channel(channel_id)
@@ -272,6 +318,8 @@ class Music(CogBase):
         guild_id = event.player.guild_id
         guild = self.bot.get_guild(guild_id)
 
+        logger.debug("on_queue_end: guild=%s", guild_id)
+
         if guild is not None:
             logger.info(f"Queue finished for guild: {guild_id}")
             await guild.voice_client.disconnect(force=True)
@@ -281,6 +329,11 @@ class Music(CogBase):
         """Event fired when a deferred audio track fails to produce a playable track."""
 
         logger.warning(f"Track load failed: {event.original}")
+        logger.debug(
+            "on_track_load_fail: guild=%s player=%s",
+            event.player.guild_id,
+            event.player,
+        )
 
         # There is only DefaultPlayer implementation for BasePlayer
         await ty.cast(lavalink.DefaultPlayer, event.player).skip()
@@ -290,6 +343,7 @@ class Music(CogBase):
         """Event fired when a node has finished connecting."""
 
         logger.info(f"Node: <{event.node.name}> is ready!")
+        logger.debug("on_node_connect: node=%s", event.node.name)
 
     @lavalink.listener(NodeDisconnectedEvent)
     async def on_node_disconnect(self, event: NodeDisconnectedEvent) -> None:
@@ -311,6 +365,8 @@ class Music(CogBase):
 
         await ia.response.defer()
 
+        logger.debug("play: guild=%s query=%s", ia.guild.name, query)
+
         # Get the player for this guild from cache.
         player = self.lavalink.player_manager.get(ia.guild.id)
 
@@ -318,9 +374,15 @@ class Music(CogBase):
         # SoundCloud searching is possible by prefixing "scsearch:" instead.
         if not url_rx.match(query):
             query = f"ytsearch:{query}"
+            logger.debug("play: prefixing query with ytsearch -> %s", query)
 
         # Get the results for the query from Lavalink.
         results = await player.node.get_tracks(query)
+        logger.debug(
+            "play: load_type=%s tracks=%s",
+            results.load_type,
+            len(results.tracks) if results.tracks else 0,
+        )
 
         embed = discord.Embed(color=discord.Color.blurple())
 
@@ -353,12 +415,14 @@ class Music(CogBase):
             track.extra["requester"] = ia.user.name
 
             player.add(track=track)
+            logger.debug("play: enqueued %s", track.title)
 
         await ia.followup.send(embed=embed)
 
         # We don't want to call .play() if the player is playing as that will effectively skip
         # the current track.
         if not player.is_playing:
+            logger.debug("play: starting playback")
             await player.play()
 
     @discord.app_commands.command()
@@ -370,6 +434,8 @@ class Music(CogBase):
         # The necessary voice channel checks are handled in "create_player."
         # We don't need to duplicate code checking them again.
 
+        logger.debug("quit: guild=%s", ia.guild.name)
+
         # Clear the queue to ensure old tracks don't start playing
         # when someone else queues something.
         player.queue.clear()
@@ -377,6 +443,7 @@ class Music(CogBase):
         await player.stop()
         # Disconnect from the voice channel.
         await ia.guild.voice_client.disconnect(force=True)
+        logger.debug("quit: disconnected from guild=%s", ia.guild.name)
 
         await ia.response.send_message("Ready to leave. Goodbye!")
 
@@ -385,6 +452,7 @@ class Music(CogBase):
     async def queue(self, ia: discord.Interaction) -> None:
         """Show all queued songs. A maximum of 20 songs are displayed."""
         player: lavalink.DefaultPlayer = self.lavalink.player_manager.get(ia.guild.id)
+        logger.debug("queue: guild=%s queue_size=%d", ia.guild.name, len(player.queue))
 
         embedDict: ty.Dict[
             str, str | int | ty.Dict[str, str] | ty.List[ty.Dict[str, str | int | bool]]
@@ -462,9 +530,11 @@ class Music(CogBase):
 
         if player.paused:
             await player.set_pause(False)
+            logger.debug("pause: resumed guild=%s", ia.guild.name)
             await ia.response.send_message("Music player resumed!")
         else:
             await player.set_pause(True)
+            logger.debug("pause: paused guild=%s", ia.guild.name)
             await ia.response.send_message("Music player paused!")
 
     @discord.app_commands.command()
@@ -475,11 +545,13 @@ class Music(CogBase):
 
         if player.loop == player.LOOP_NONE:
             player.set_loop(player.LOOP_SINGLE)
+            logger.debug("loop: enabled guild=%s", ia.guild.name)
             await ia.response.send_message(
                 "Looping started. Run /loop again to cancel..."
             )
         else:
             player.set_loop(player.LOOP_NONE)
+            logger.debug("loop: disabled guild=%s", ia.guild.name)
             await ia.response.send_message("Looping stopped.")
 
     @discord.app_commands.command()
@@ -487,6 +559,7 @@ class Music(CogBase):
     async def skip(self, ia: discord.Interaction) -> None:
         """Stop and skip the currently playing song. Also untoggles looping."""
         player: lavalink.DefaultPlayer = self.lavalink.player_manager.get(ia.guild.id)
+        logger.debug("skip: guild=%s", ia.guild.name)
 
         await ia.response.send_message(
             "Skipping the current song.{looping}".format(

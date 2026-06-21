@@ -39,7 +39,7 @@ class AI(CogBase):
         current_message = await ia.followup.send("Thinking...", wait=True)
 
         full_text = ""
-        last_edit_time = asyncio.get_event_loop().time()
+        last_edit_time = asyncio.get_running_loop().time()
         current_block = 0
 
         try:
@@ -67,7 +67,7 @@ class AI(CogBase):
                     )
                     current_block = new_block
 
-                now = asyncio.get_event_loop().time()
+                now = asyncio.get_running_loop().time()
                 if now - last_edit_time >= STREAM_EDIT_INTERVAL:
                     block_start = current_block * DISCORD_MAX_MESSAGE_LENGTH
                     block_text = full_text[
@@ -80,6 +80,11 @@ class AI(CogBase):
             pass
 
         # Final edit with the complete text for the last block
+        logger.debug(
+            "Stream complete, total length=%d, blocks=%d",
+            len(full_text),
+            current_block + 1,
+        )
         if full_text:
             block_start = current_block * DISCORD_MAX_MESSAGE_LENGTH
             block_text = full_text[

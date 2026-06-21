@@ -52,6 +52,7 @@ class General(CogBase):
             pixiv_link
         )
         if not match:
+            logger.debug("pixiv: invalid URL format")
             await ia.response.send_message(
                 "ERROR: Not a valid URL!",
                 ephemeral=True,
@@ -90,12 +91,17 @@ class General(CogBase):
         )
 
         download = job.DownloadJob(match.group(1))
+        logger.debug("pixiv: starting download for %s", match.group(1))
         download.run()
+        logger.debug("pixiv: download completed with status=%d", download.status)
 
         if download.status == 0:
             link = Path(download.pathfmt.path)
 
             if not link.is_file():
+                logger.warning(
+                    "pixiv: download succeeded but file not found at %s", link
+                )
                 await ia.followup.send(
                     "ERROR: Something went wrong."
                     + (
@@ -107,6 +113,7 @@ class General(CogBase):
                 )
                 return
 
+            logger.debug("pixiv: sending file %s", link)
             embed = discord.Embed().add_field(
                 name="Source", value=pixiv_link, inline=False
             )
@@ -115,8 +122,10 @@ class General(CogBase):
                 file=discord.File(link),
             )
             link.unlink()
+            logger.debug("pixiv: file sent and cleaned up")
 
         else:
+            logger.warning("pixiv: download failed with status=%d", download.status)
             match download.status:
                 case 4:
                     # HttpError: Most probably because the image is too big
