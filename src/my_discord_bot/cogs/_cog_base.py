@@ -62,19 +62,21 @@ class CogBase(commands.Cog):
         except Exception:
             return maxSize
 
-    async def call_openai(
+    async def call_openai_stream(
         self,
         messages: Iterable[ChatCompletionMessageParam],
-    ) -> str | None:
-        """Make a generic OpenAI API call. Returns the assistant's text, or None on failure."""
+    ) -> ty.AsyncGenerator[str, None]:
+        """Stream an OpenAI chat completion. Yields each text chunk as it arrives."""
 
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
+                stream=True,
                 extra_body={"chat_template_kwargs": {"enable_thinking": False}},
             )
-            return response.choices[0].message.content
+            async for chunk in response:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
         except Exception as e:
-            logger.error("OpenAI API call failed:", e)
-            return None
+            logger.error("OpenAI API stream failed:", e)

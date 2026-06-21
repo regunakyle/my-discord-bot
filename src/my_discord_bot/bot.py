@@ -107,6 +107,16 @@ class DiscordBot(commands.Bot):
                 )
             ).scalar()
             if not guild:
+                try:
+                    session.add(
+                        Guild(
+                            guild_id=member.guild.id,
+                            guild_name=member.guild.name,
+                        )
+                    )
+                    await session.commit()
+                except Exception:
+                    logger.error("Failed to add guild to database.", exc_info=True)
                 return
 
         if channel is not None and guild.welcome_message:

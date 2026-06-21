@@ -1,12 +1,13 @@
+import asyncio
 import logging
-import math
-import os
+import typing as ty
 
 import discord
-import openai
 from discord.ext import commands
+from discord.guild import TextChannel
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from ..constants import DISCORD_MAX_MESSAGE_LENGTH, STREAM_EDIT_INTERVAL
 from ._cog_base import CogBase, check_cooldown_factory
 
 logger = logging.getLogger(__name__)
@@ -32,18 +33,58 @@ class AI(CogBase):
         message: str,
     ) -> None:
         """(RATE LIMITED) Chat with AI."""
-        # TODO: Stream the message instead, edit the Discord response as new chunks arrive
-
         await ia.response.defer()
 
-        resp = await self.call_openai([{"role": "user", "content": message}])
+        # Send initial message, we'll edit it as chunks arrive
+        current_message = await ia.followup.send("Thinking...", wait=True)
 
-        if resp is None:
-            await ia.followup.send("ERROR: OpenAI API call failed.")
-            return
+        full_text = ""
+        last_edit_time = asyncio.get_event_loop().time()
+        current_block = 0
 
-        await ia.followup.send(resp[:2000])
+        try:
+            async for chunk in self.call_openai_stream(
+                [{"role": "user", "content": message}]
+            ):
+                full_text += chunk
 
-        if len(resp) > 2000:
-            for split in range(1, math.ceil(len(resp) / 2000)):
-                await ia.followup.send(resp[2000 * split : 2000 * (split + 1)])
+                # Check if we've crossed into a new 2000-char block
+                new_block = len(full_text) // DISCORD_MAX_MESSAGE_LENGTH
+                if new_block > current_block:
+                    # Finalize the current block on the active message
+                    block_start = current_block * DISCORD_MAX_MESSAGE_LENGTH
+                    block_text = full_text[
+                        block_start : block_start + DISCORD_MAX_MESSAGE_LENGTH
+                    ]
+                    await current_message.edit(content=block_text)
+
+                    # Send a new reply message for the next block
+                    current_message: discord.Message = await ty.cast(
+                        TextChannel, ia.channel
+                    ).send(
+                        "Loading...",
+                        reference=current_message.to_reference(),
+                    )
+                    current_block = new_block
+
+                now = asyncio.get_event_loop().time()
+                if now - last_edit_time >= STREAM_EDIT_INTERVAL:
+                    block_start = current_block * DISCORD_MAX_MESSAGE_LENGTH
+                    block_text = full_text[
+                        block_start : block_start + DISCORD_MAX_MESSAGE_LENGTH
+                    ]
+                    await current_message.edit(content=block_text)
+                    last_edit_time = now
+        except Exception:
+            # If streaming failed mid-way, fall through to send whatever we have
+            pass
+
+        # Final edit with the complete text for the last block
+        if full_text:
+            block_start = current_block * DISCORD_MAX_MESSAGE_LENGTH
+            block_text = full_text[
+                block_start : block_start + DISCORD_MAX_MESSAGE_LENGTH
+            ]
+            await current_message.edit(content=block_text)
+        else:
+            await current_message.edit(content="ERROR: OpenAI API call failed.")
