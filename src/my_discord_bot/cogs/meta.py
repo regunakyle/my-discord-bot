@@ -1,4 +1,3 @@
-import datetime as dt
 import logging
 import os
 import tomllib
@@ -10,6 +9,7 @@ from discord.ext import commands
 from sqlalchemy import delete, insert, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from ..exceptions import GuildNotFoundError
 from ..models import Guild
 from ._cog_base import CogBase
 
@@ -38,10 +38,12 @@ class Meta(CogBase):
             return
 
         synced = await self.bot.tree.sync()
+        logger.info("sync: synced %d commands globally", len(synced))
 
         await ctx.send(f"Synced {len(synced)} commands globally.")
 
         # Sync database with joined guilds
+        logger.info("sync: syncing %d guilds to database", len(self.bot.guilds))
         async with self.sessionmaker() as session:
             await session.execute(
                 delete(Guild).where(
@@ -58,6 +60,7 @@ class Meta(CogBase):
                     pass
 
             await session.commit()
+            logger.info("sync: guild database synced successfully")
 
     @discord.app_commands.command()
     @discord.app_commands.describe(
@@ -140,6 +143,7 @@ class Meta(CogBase):
                     .values(bot_channel=None)
                 )
                 await session.commit()
+            logger.debug("set_bot_channel: unset guild=%s", ia.guild.name)
             await ia.response.send_message("Bot channel unset.")
             return
 
@@ -149,13 +153,15 @@ class Meta(CogBase):
                 guild_channel = await channel.fetch()
             except discord.Forbidden:
                 await ia.response.send_message(
-                    "ERROR: The bot does not have permission to view that channel."
+                    "ERROR: The bot does not have permission to view that channel.",
+                    ephemeral=True,
                 )
                 return
 
             if not guild_channel.permissions_for(ia.guild.me).send_messages:
                 await ia.response.send_message(
-                    "ERROR: The bot needs to have write access to that channel."
+                    "ERROR: The bot needs to have write access to that channel.",
+                    ephemeral=True,
                 )
                 return
 
@@ -168,14 +174,11 @@ class Meta(CogBase):
                         .values(bot_channel=channel.id)
                     )
                 ).rowcount == 0:
-                    session.add(
-                        Guild(
-                            guild_id=ia.guild.id,
-                            guild_name=ia.guild.name,
-                            bot_channel=channel.id,
-                        )
-                    )
+                    raise GuildNotFoundError(ia.guild)
                 await session.commit()
+            logger.debug(
+                "set_bot_channel: set channel=%s guild=%s", channel.id, ia.guild.name
+            )
             await ia.response.send_message(resp)
             return
 
@@ -199,7 +202,8 @@ class Meta(CogBase):
         # Emote: <a:EmoteName:EmoteID>
         if len(message) > 2000:
             await ia.response.send_message(
-                "ERROR: Your message is too long! Maximum 2000 characters allowed."
+                "ERROR: Your message is too long! Maximum 2000 characters allowed.",
+                ephemeral=True,
             )
             return
 
@@ -226,15 +230,11 @@ class Meta(CogBase):
                         .values(welcome_message=unescaped_msg)
                     )
                 ).rowcount == 0:
-                    session.add(
-                        Guild(
-                            guild_id=ia.guild.id,
-                            guild_name=ia.guild.name,
-                            welcome_message=unescaped_msg,
-                        )
-                    )
+                    raise GuildNotFoundError(ia.guild)
 
             await session.commit()
+            logger.debug("set_welcome_message: committed guild=%s", ia.guild.name)
+
         await ia.response.send_message(resp)
 
     @discord.app_commands.command()
@@ -249,6 +249,7 @@ class Meta(CogBase):
         version_template = "Current bot version: {version}"
 
         if os.getenv("APP_VERSION"):
+            logger.debug("version: using APP_VERSION=%s", os.getenv("APP_VERSION"))
             await ia.response.send_message(
                 version_template.format(version=os.getenv("APP_VERSION"))
             )
@@ -256,6 +257,11 @@ class Meta(CogBase):
             git.exists()
             and (repo := pygit2.Repository(str(git))).head.shorthand != "master"
         ):
+            logger.debug(
+                "version: using git branch=%s commit=%s",
+                repo.head.shorthand,
+                repo.revparse("HEAD").from_object.short_id,
+            )
             await ia.response.send_message(
                 version_template.format(
                     version=f"{repo.head.shorthand}-{repo.revparse('HEAD').from_object.short_id}"
@@ -264,14 +270,18 @@ class Meta(CogBase):
         elif pyproject.exists():
             with open(pyproject, "rb") as toml:
                 try:
+                    version = tomllib.load(toml)["project"]["version"]
+                    logger.debug("version: using pyproject.toml version=%s", version)
                     await ia.response.send_message(
-                        version_template.format(
-                            version=tomllib.load(toml)["project"]["version"]
-                        )
+                        version_template.format(version=version)
                     )
                 except KeyError:
                     await ia.response.send_message(
-                        "ERROR: Version not found in pyproject.toml!"
+                        "ERROR: Version not found in pyproject.toml!",
+                        ephemeral=True,
                     )
         else:
-            await ia.response.send_message("ERROR: Version not found!")
+            await ia.response.send_message(
+                "ERROR: Version not found!",
+                ephemeral=True,
+            )

@@ -1,12 +1,13 @@
+import asyncio
 import logging
-import math
-import os
+import typing as ty
 
 import discord
-import openai
 from discord.ext import commands
+from discord.guild import TextChannel
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from ..constants import DISCORD_MAX_MESSAGE_LENGTH, STREAM_EDIT_INTERVAL
 from ._cog_base import CogBase, check_cooldown_factory
 
 logger = logging.getLogger(__name__)
@@ -19,8 +20,6 @@ class AI(CogBase):
         self, bot: commands.Bot, sessionmaker: async_sessionmaker[AsyncSession]
     ) -> None:
         super().__init__(bot, sessionmaker)
-        self.client = openai.OpenAI()
-        self.model_name = os.getenv("OPENAI_MODEL_NAME", "")
 
     @discord.app_commands.command()
     @discord.app_commands.checks.dynamic_cooldown(check_cooldown_factory(1.5))
@@ -34,27 +33,63 @@ class AI(CogBase):
         message: str,
     ) -> None:
         """(RATE LIMITED) Chat with AI."""
-        # TODO: Stream the message instead, edit the Discord response as new chunks arrive
-
         await ia.response.defer()
 
-        message = (
-            self.client.chat.completions.create(
-                model=self.model_name,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": message,
-                    },
-                ],
-                extra_body={"chat_template_kwargs": {"enable_thinking": False}},
-            )
-            .choices[0]
-            .message.content
+        # Send initial message, we'll edit it as chunks arrive
+        current_message = await ia.followup.send("Thinking...", wait=True)
+
+        full_text = ""
+        last_edit_time = asyncio.get_running_loop().time()
+        current_block = 0
+
+        try:
+            async for chunk in self.call_openai_stream(
+                [{"role": "user", "content": message}]
+            ):
+                full_text += chunk
+
+                # Check if we've crossed into a new 2000-char block
+                new_block = len(full_text) // DISCORD_MAX_MESSAGE_LENGTH
+                if new_block > current_block:
+                    # Finalize the current block on the active message
+                    block_start = current_block * DISCORD_MAX_MESSAGE_LENGTH
+                    block_text = full_text[
+                        block_start : block_start + DISCORD_MAX_MESSAGE_LENGTH
+                    ]
+                    await current_message.edit(content=block_text)
+
+                    # Send a new reply message for the next block
+                    current_message: discord.Message = await ty.cast(
+                        TextChannel, ia.channel
+                    ).send(
+                        "Loading...",
+                        reference=current_message.to_reference(),
+                    )
+                    current_block = new_block
+
+                now = asyncio.get_running_loop().time()
+                if now - last_edit_time >= STREAM_EDIT_INTERVAL:
+                    block_start = current_block * DISCORD_MAX_MESSAGE_LENGTH
+                    block_text = full_text[
+                        block_start : block_start + DISCORD_MAX_MESSAGE_LENGTH
+                    ]
+                    await current_message.edit(content=block_text)
+                    last_edit_time = now
+        except Exception:
+            # If streaming failed mid-way, fall through to send whatever we have
+            logger.error("Error during chat", exc_info=True)
+
+        # Final edit with the complete text for the last block
+        logger.debug(
+            "Stream complete, total length=%d, blocks=%d",
+            len(full_text),
+            current_block + 1,
         )
-
-        await ia.followup.send(message[:2000])
-
-        if len(message) > 2000:
-            for split in range(1, math.ceil(len(message) / 2000)):
-                await ia.followup.send(message[2000 * split : 2000 * (split + 1)])
+        if full_text:
+            block_start = current_block * DISCORD_MAX_MESSAGE_LENGTH
+            block_text = full_text[
+                block_start : block_start + DISCORD_MAX_MESSAGE_LENGTH
+            ]
+            await current_message.edit(content=block_text)
+        else:
+            await current_message.edit(content="ERROR: OpenAI API call failed.")

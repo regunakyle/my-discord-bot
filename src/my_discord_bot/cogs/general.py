@@ -52,7 +52,11 @@ class General(CogBase):
             pixiv_link
         )
         if not match:
-            await ia.response.send_message("ERROR: Not a valid URL!")
+            logger.debug("pixiv: invalid URL format")
+            await ia.response.send_message(
+                "ERROR: Not a valid URL!",
+                ephemeral=True,
+            )
             return
 
         # Delay response, maximum 15 mins
@@ -87,22 +91,29 @@ class General(CogBase):
         )
 
         download = job.DownloadJob(match.group(1))
+        logger.debug("pixiv: starting download for %s", match.group(1))
         download.run()
+        logger.debug("pixiv: download completed with status=%d", download.status)
 
         if download.status == 0:
             link = Path(download.pathfmt.path)
 
             if not link.is_file():
+                logger.warning(
+                    "pixiv: download succeeded but file not found at %s", link
+                )
                 await ia.followup.send(
                     "ERROR: Something went wrong."
                     + (
                         " Maybe your image_number is incorrect?"
                         if image_number > 1
                         else ""
-                    )
+                    ),
+                    ephemeral=True,
                 )
                 return
 
+            logger.debug("pixiv: sending file %s", link)
             embed = discord.Embed().add_field(
                 name="Source", value=pixiv_link, inline=False
             )
@@ -111,30 +122,38 @@ class General(CogBase):
                 file=discord.File(link),
             )
             link.unlink()
+            logger.debug("pixiv: file sent and cleaned up")
 
         else:
+            logger.warning("pixiv: download failed with status=%d", download.status)
             match download.status:
                 case 4:
                     # HttpError: Most probably because the image is too big
                     await ia.followup.send(
                         "ERROR: Download failed. Most probably because your image is too big. (Maximum size: {size}MiB)".format(
                             size=self.get_max_file_size(ia.guild)
-                        )
+                        ),
+                        ephemeral=True,
                     )
                     return
                 case 8:
                     # NotFoundError: Invalid link
-                    await ia.followup.send("ERROR: You link is invalid!")
+                    await ia.followup.send(
+                        "ERROR: You link is invalid!",
+                        ephemeral=True,
+                    )
                     return
                 case 16:
                     # AuthenticationError: No token provided
                     await ia.followup.send(
-                        "ERROR: Cannot login to Pixiv. Please notify the bot owner! \nTo the bot owner: Please find instructions in https://github.com/regunakyle/my-discord-bot#important-you-must-have-ffmepg-installed-and-setup-an-oauth-token-to-use-this-command"
+                        "ERROR: Cannot login to Pixiv. Please notify the bot owner! \nTo the bot owner: Please find instructions in https://github.com/regunakyle/my-discord-bot#important-you-must-have-ffmepg-installed-and-setup-an-oauth-token-to-use-this-command",
+                        ephemeral=True,
                     )
                     return
                 case _:
                     logger.error(f"Gallery-DL failed. Status code: {download.status}")
                     await ia.followup.send(
-                        "ERROR: Something went wrong. Please notify the bot owner if the error persists."
+                        "ERROR: Something went wrong. Please notify the bot owner if the error persists.",
+                        ephemeral=True,
                     )
                     return

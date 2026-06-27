@@ -1,9 +1,12 @@
 import logging
 import os
 import typing as ty
+from collections.abc import Iterable
 
 import discord
+import openai
 from discord.ext import commands
+from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
@@ -31,6 +34,19 @@ class CogBase(commands.Cog):
         self.bot = bot
         self.sessionmaker = sessionmaker
 
+        self.model_name = os.getenv("OPENAI_MODEL_NAME", "")
+        try:
+            self.max_file_size = abs(int(os.getenv("MAX_FILE_SIZE", "25")))
+        except Exception:
+            self.max_file_size = 25
+
+        self.client = openai.AsyncOpenAI()
+        logger.debug(
+            "CogBase init: model=%s max_file_size=%d",
+            self.model_name,
+            self.max_file_size,
+        )
+
     def get_max_file_size(
         self,
         guild: None | discord.Guild,
@@ -51,7 +67,32 @@ class CogBase(commands.Cog):
         elif nitroCount < 14:  # Level 2
             maxSize = 50
 
+        result = min(maxSize, self.max_file_size)
+        logger.debug(
+            "get_max_file_size: guild=%s nitro=%d maxSize=%d env=%d result=%d",
+            guild.name if guild else None,
+            nitroCount,
+            maxSize,
+            self.max_file_size,
+            result,
+        )
+        return result
+
+    async def call_openai_stream(
+        self,
+        messages: Iterable[ChatCompletionMessageParam],
+    ) -> ty.AsyncGenerator[str, None]:
+        """Stream an OpenAI chat completion. Yields each text chunk as it arrives."""
+
         try:
-            return min(maxSize, abs(int(os.getenv("MAX_FILE_SIZE", "25"))))
-        except Exception:
-            return maxSize
+            response = await self.client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                stream=True,
+                extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+            )
+            async for chunk in response:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        except Exception as e:
+            logger.error("OpenAI API stream failed:", e)

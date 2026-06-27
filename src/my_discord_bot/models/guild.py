@@ -7,6 +7,7 @@ from ._model_base import ModelBase
 
 if ty.TYPE_CHECKING:
     from .subscription import Subscription
+    from .translation import Translation
 
 
 class Guild(ModelBase):
@@ -21,6 +22,11 @@ class Guild(ModelBase):
     welcome_message: Mapped[None | str] = mapped_column(Unicode(2000), default=None)
 
     subscriptions: Mapped[ty.List["Subscription"]] = relationship(
+        back_populates="guild",
+        lazy="raise",
+        cascade="save-update, merge, delete",
+    )
+    translation: Mapped["Translation | None"] = relationship(
         back_populates="guild",
         lazy="raise",
         cascade="save-update, merge, delete",

@@ -11,6 +11,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import joinedload
 
+from ..exceptions import GuildNotFoundError
 from ..models import Guild
 from ..models import Subscription as Sub
 from ._cog_base import CogBase
@@ -49,7 +50,7 @@ class Subscription(CogBase):
         MESSAGE_TEMPLATE = """{role_tag}
 # {title}
 ## Scheduled Start Time
-{scheduled_start_time} 
+<t:{unix_timestamp}:F>
 ## Description
 {description}
 ## Link
@@ -93,7 +94,7 @@ https://www.youtube.com/watch?v={video_id}"""
                         logger.info(
                             f"No video found for channel id {subscription.youtube_channel_id}"
                         )
-                        break
+                        continue
 
                     for item in playlist_items["items"]:
                         if (
@@ -151,18 +152,13 @@ https://www.youtube.com/watch?v={video_id}"""
                                     else "@everyone",
                                     title=video["snippet"]["title"],
                                     # HKT+8
-                                    scheduled_start_time=(
+                                    unix_timestamp=int(
                                         dt.datetime.fromisoformat(
                                             video["liveStreamingDetails"][
                                                 "scheduledStartTime"
                                             ].replace("Z", "+00:00")
-                                        ).replace(
-                                            tzinfo=zoneinfo.ZoneInfo(
-                                                key="Asia/Hong_Kong"
-                                            )
-                                        )
-                                        + dt.timedelta(hours=8)
-                                    ).strftime(r"%B %d (%A), %I:%M %p %Z"),
+                                        ).timestamp()
+                                    ),
                                     description=video["snippet"]["description"],
                                     video_id=video["id"],
                                 )
@@ -217,12 +213,16 @@ https://www.youtube.com/watch?v={video_id}"""
                     )
                 )
                 .unique()
-                .scalar_one()
+                .scalar_one_or_none()
             )
+
+            if guild is None:
+                raise GuildNotFoundError(ia.guild)
 
             if not guild.bot_channel:
                 await ia.followup.send(
-                    "ERROR: Bot channel not set. Use `/set_bot_channel` first."
+                    "ERROR: Bot channel not set. Use `/set_bot_channel` first.",
+                    ephemeral=True,
                 )
                 return
 
@@ -243,7 +243,10 @@ https://www.youtube.com/watch?v={video_id}"""
             )
 
             if "items" not in channel:
-                await ia.followup.send("ERROR: Invalid YouTube channel ID")
+                await ia.followup.send(
+                    "ERROR: Invalid YouTube channel ID",
+                    ephemeral=True,
+                )
                 return
 
             if (
@@ -251,7 +254,8 @@ https://www.youtube.com/watch?v={video_id}"""
                 or "snippet" not in channel["items"][0]
             ):
                 await ia.followup.send(
-                    "ERROR: Cannot find enough information for this Youtube channel."
+                    "ERROR: Cannot find enough information for this Youtube channel.",
+                    ephemeral=True,
                 )
                 return
 
