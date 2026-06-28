@@ -19,7 +19,6 @@ class Translation(ModelBase):
         ForeignKey("guild.id", ondelete="CASCADE"), unique=True
     )
     trigger_emote: Mapped[str] = mapped_column(Unicode(50))
-    chinese_channel_id: Mapped[int] = mapped_column()
     english_channel_id: Mapped[int] = mapped_column()
 
     guild: Mapped["Guild"] = relationship(

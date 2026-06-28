@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 import typing as ty
 import uuid
 
@@ -14,6 +15,7 @@ from ..constants import (
     ACK_EMOJI,
     DISCORD_MAX_MESSAGE_LENGTH,
     STREAM_EDIT_INTERVAL,
+    TRANSLATION_HEADER_PREFIX,
     TRANSLATION_HEADER_TEMPLATE,
 )
 from ..exceptions import GuildNotFoundError
@@ -22,6 +24,37 @@ from ..models import Translation as tl_model
 from ._cog_base import CogBase
 
 logger = logging.getLogger(__name__)
+
+# Regex to extract channel ID from <#123456789> format
+_CHANNEL_ID_RE = re.compile(r"<#(\d+)>")
+
+
+def _build_header(chain_id: str, source_channel_id: int, user_name: str) -> str:
+    """Build a translation header string."""
+    return TRANSLATION_HEADER_TEMPLATE.format(chain_id, source_channel_id, user_name)
+
+
+def _parse_header(header: str) -> tuple[str, int, str] | None:
+    """Parse a translation header.
+
+    Returns (chain_id, source_channel_id, user_name) or None.
+    """
+    if not header.startswith(TRANSLATION_HEADER_PREFIX):
+        return None
+
+    rest = header[len(TRANSLATION_HEADER_PREFIX) :]
+    parts = rest.split(" | ")
+    if len(parts) < 3:
+        return None
+
+    chain_id = parts[0].strip()
+
+    channel_match = _CHANNEL_ID_RE.search(parts[1])
+    if not channel_match:
+        return None
+
+    user_name = parts[2].strip()
+    return chain_id, int(channel_match.group(1)), user_name
 
 
 class Translation(CogBase):
@@ -127,32 +160,6 @@ class Translation(CogBase):
 
             return guild_row.translation if guild_row else None
 
-    def _resolve_direction(
-        self,
-        source_channel_id: int,
-        translation: tl_model,
-        guild: discord.Guild,
-    ) -> tuple[str, discord.abc.Messageable] | None:
-        """Return (target_language, target_channel) for the given source channel.
-
-        Returns None if the target channel cannot be resolved.
-        """
-        if source_channel_id == translation.chinese_channel_id:
-            target_language = "English"
-            target_channel_id = translation.english_channel_id
-        else:
-            target_language = "Traditional Chinese"
-            target_channel_id = translation.chinese_channel_id
-
-        target_channel = guild.get_channel(target_channel_id)
-        if target_channel is None or not isinstance(
-            target_channel, discord.abc.Messageable
-        ):
-            logger.error("Target channel %s not found.", target_channel_id)
-            return None
-
-        return target_language, target_channel
-
     async def _translate_and_send(
         self,
         text: str,
@@ -201,11 +208,8 @@ class Translation(CogBase):
         if str(reaction.emoji) != translation.trigger_emote:
             return
 
-        # Check channel
-        if reaction.message.channel.id not in (
-            translation.chinese_channel_id,
-            translation.english_channel_id,
-        ):
+        # Skip if the message is already in the english channel
+        if reaction.message.channel.id == translation.english_channel_id:
             return
 
         # Ack check — skip if already processed
@@ -220,31 +224,36 @@ class Translation(CogBase):
             logger.error("Failed to add ack reaction: %s", e)
             return
 
-        # Resolve direction
-        result = self._resolve_direction(
-            reaction.message.channel.id, translation, reaction.message.guild
+        # Resolve target channel from DB config
+        target_channel = reaction.message.guild.get_channel(
+            translation.english_channel_id
         )
-        if result is None:
+        if target_channel is None or not isinstance(
+            target_channel, discord.abc.Messageable
+        ):
+            logger.error(
+                "English channel %s not found.", translation.english_channel_id
+            )
             return
-        target_language, target_channel = result
 
         logger.debug(
-            "on_reaction_add: translating %s -> %s",
+            "on_reaction_add: translating %s -> English",
             reaction.message.channel.name,
-            target_language,
         )
 
-        # Compose message header with a unique chain ID
+        # Compose header with chain ID, source channel, original user name
         chain_id = uuid.uuid4().hex[:8]
-        header = TRANSLATION_HEADER_TEMPLATE.format(chain_id)
+        header = _build_header(
+            chain_id,
+            reaction.message.channel.id,
+            reaction.message.author.name,
+        )
 
         # Translate
         text = reaction.message.content
         if text:
             logger.debug("on_reaction_add: translating text (%d chars)", len(text))
-            await self._translate_and_send(
-                text, target_language, target_channel, header
-            )
+            await self._translate_and_send(text, "English", target_channel, header)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
@@ -259,40 +268,45 @@ class Translation(CogBase):
             return
 
         resolved = message.reference.resolved
-        # Exit if user not replying to self
+        # Exit if user not replying to bot
         if resolved.author.id != self.bot.user.id:
             return
 
-        # Check for [TRANSLATION] flag and extract chain ID
+        # Check for [TRANSLATION] flag and parse header
         first_line = resolved.content.split("\n")[0]
-        prefix = TRANSLATION_HEADER_TEMPLATE.format("")
-        if not first_line.startswith(prefix):
+        parsed = _parse_header(first_line)
+        if parsed is None:
             return
-        chain_id = first_line[len(prefix) :].strip()
-        if not chain_id:
-            return
+
+        chain_id, source_channel_id, _user_name = parsed
         logger.debug("on_message: matched chain %s", chain_id)
 
-        # Load config
+        # Load config for english channel
         translation = await self._get_translation(message.guild)
         if translation is None:
             return
 
-        # Verify channel
-        if message.channel.id not in (
-            translation.chinese_channel_id,
-            translation.english_channel_id,
+        english_channel_id = translation.english_channel_id
+
+        # Determine direction based on which channel the reply is in
+        if message.channel.id == english_channel_id:
+            target_language = "Traditional Chinese"
+            target_channel_id = source_channel_id
+        elif message.channel.id == source_channel_id:
+            target_language = "English"
+            target_channel_id = english_channel_id
+        else:
+            return
+
+        target_channel = message.guild.get_channel(target_channel_id)
+        if target_channel is None or not isinstance(
+            target_channel, discord.abc.Messageable
         ):
+            logger.error("Target channel %s not found.", target_channel_id)
             return
 
-        # Resolve direction
-        result = self._resolve_direction(message.channel.id, translation, message.guild)
-        if result is None:
-            return
-        target_language, target_channel = result
-
-        # Compose message header (reuse the same chain ID)
-        header = TRANSLATION_HEADER_TEMPLATE.format(chain_id)
+        # Reuse the same header
+        header = _build_header(chain_id, source_channel_id, _user_name)
 
         # Translate
         text = message.content
@@ -311,24 +325,15 @@ class Translation(CogBase):
     @discord.app_commands.checks.has_permissions(manage_channels=True)
     @discord.app_commands.describe(
         emote="Trigger emoji (e.g. <a:name:id>, <:name:id>, or 🔄)",
-        chinese_channel="Channel for Chinese messages",
-        english_channel="Channel for English messages",
+        english_channel="Channel where English translations are posted",
     )
     async def translation_setup(
         self,
         ia: discord.Interaction,
         emote: str,
-        chinese_channel: discord.TextChannel,
         english_channel: discord.TextChannel,
     ) -> None:
-        """Configure translation between two channels."""
-        if chinese_channel.id == english_channel.id:
-            await ia.response.send_message(
-                "ERROR: Chinese and English channels must be different!",
-                ephemeral=True,
-            )
-            return
-
+        """Configure translation to an English channel."""
         async with self.sessionmaker() as session:
             guild_row = (
                 await session.execute(
@@ -343,12 +348,10 @@ class Translation(CogBase):
 
             if guild_row.translation is not None:
                 guild_row.translation.trigger_emote = emote
-                guild_row.translation.chinese_channel_id = chinese_channel.id
                 guild_row.translation.english_channel_id = english_channel.id
             else:
                 guild_row.translation = tl_model(
                     trigger_emote=emote,
-                    chinese_channel_id=chinese_channel.id,
                     english_channel_id=english_channel.id,
                 )
 
@@ -366,9 +369,7 @@ class Translation(CogBase):
         await ia.response.send_message(
             f"Translation configured!\n"
             f"Trigger emote: {emote}\n"
-            f"Chinese channel: {chinese_channel.mention}\n"
             f"English channel: {english_channel.mention}",
-            ephemeral=True,
         )
 
     @discord.app_commands.command(name="translation_status")
@@ -392,19 +393,15 @@ class Translation(CogBase):
         if translation is None:
             await ia.response.send_message(
                 "Translation is not configured for this server.",
-                ephemeral=True,
             )
             return
 
-        chinese_channel = ia.guild.get_channel(translation.chinese_channel_id)
         english_channel = ia.guild.get_channel(translation.english_channel_id)
 
         await ia.response.send_message(
             f"**Translation Configuration**\n"
             f"Trigger emote: {translation.trigger_emote}\n"
-            f"Chinese channel: {chinese_channel.mention if chinese_channel else 'Channel not found'}\n"
             f"English channel: {english_channel.mention if english_channel else 'Channel not found'}",
-            ephemeral=True,
         )
 
     @discord.app_commands.command(name="translation_reset")
@@ -430,5 +427,4 @@ class Translation(CogBase):
 
         await ia.response.send_message(
             "Translation configuration has been reset.",
-            ephemeral=True,
         )

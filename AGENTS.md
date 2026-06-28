@@ -19,6 +19,10 @@ A personal Discord bot written in **Python 3.13** using **discord.py** with slas
 src/my_discord_bot/
 ├── __init__.py          # main(), get_bot_version(), entrypoint()
 ├── bot.py               # DiscordBot class (extends commands.Bot)
+├── constants.py         # Shared constants (ACK_EMOJI, TRANSLATION_HEADER_TEMPLATE, etc.)
+├── exceptions/          # Custom exceptions
+│   ├── __init__.py      # Exports: GuildNotFoundError
+│   └── guild_not_found.py
 ├── cogs/                # Feature modules (see below)
 │   ├── __init__.py      # cog_list — registration order matters
 │   ├── _cog_base.py     # CogBase mixin + check_cooldown_factory
@@ -27,12 +31,14 @@ src/my_discord_bot/
 │   ├── meta.py          # >>sync, /help, /set_bot_channel, /set_welcome_message, /version
 │   ├── ai.py            # /chat (OpenAI)
 │   ├── music.py         # /play, /quit, /queue, /pause, /loop, /skip (Lavalink)
-│   └── subscription.py  # /subscribe + background YouTube live checker
+│   ├── subscription.py  # /subscribe + background YouTube live checker
+│   └── translation.py   # /translation_setup, /translation_status, /translation_reset + listeners
 └── models/              # SQLAlchemy ORM models
-    ├── __init__.py      # Exports: ModelBase, Guild, Subscription
+    ├── __init__.py      # Exports: ModelBase, Guild, Subscription, Translation
     ├── _model_base.py   # DeclarativeBase with naming conventions
     ├── guild.py         # Guild table
-    └── subscription.py  # Subscription table
+    ├── subscription.py  # Subscription table
+    └── translation.py   # Translation table
 
 migrations/              # Alembic migrations (sqlite:///volume/db.sqlite3)
 volume/                  # Runtime data (db.sqlite3, logs/, gallery-dl/) — gitignored
@@ -68,13 +74,14 @@ assets/images/           # Static images (hello.jpg, error.jpg, music.png)
 
 ### Cog Loading
 
-Cogs are registered in `cogs/__init__.py` via `cog_list`. In `setup_hook()`, three cogs are **conditionally loaded**:
+Cogs are registered in `cogs/__init__.py` via `cog_list`. In `setup_hook()`, four cogs are **conditionally loaded**:
 
 | Cog | Required env var(s) |
 |---|---|
 | `AI` | `OPENAI_API_KEY` AND `OPENAI_MODEL_NAME` (both non-empty) |
 | `Music` | `LAVALINK_URL` (non-empty) |
 | `Subscription` | `GOOGLE_API_KEY` (non-empty) |
+| `Translation` | `OPENAI_API_KEY` AND `OPENAI_MODEL_NAME` (both non-empty) |
 
 `ErrorHandler`, `General`, and `Meta` are **always loaded**.
 
@@ -99,10 +106,16 @@ All cogs inherit from `CogBase(commands.Cog)`:
 
 - `id` (auto-increment PK), `guild_id` (unique Discord snowflake), `guild_name`, `bot_channel` (nullable channel ID), `welcome_message` (nullable, max 2000 chars)
 - Relationship: `subscriptions` (one-to-many, `lazy="raise"`, cascade delete)
+- Relationship: `translation` (one-to-zero-or-one, `lazy="raise"`, cascade delete)
 
 **`Subscription`** (`models/subscription.py`):
 
 - `id` (auto-increment PK), `guild_id` (FK → guild.id, cascade delete), `youtube_channel_name`, `youtube_channel_id` (unique), `youtube_upload_playlist`, `announcement_target` (nullable role ID string), `last_checked_at`
+- Relationship: `guild` (many-to-one, `lazy="raise"`)
+
+**`Translation`** (`models/translation.py`):
+
+- `id` (auto-increment PK), `guild_id` (FK → guild.id, unique, cascade delete), `trigger_emote`, `chinese_channel_id`, `english_channel_id`
 - Relationship: `guild` (many-to-one, `lazy="raise"`)
 
 **Adding a new model**:
@@ -120,6 +133,7 @@ All cogs inherit from `CogBase(commands.Cog)`:
 - `NoPrivateMessage` → "This command is only available inside a server!"
 - `CommandOnCooldown` → Shows cooldown message
 - `CommandInvokeError` with error code 40005 → File too large message
+- `CommandInvokeError` wrapping `GuildNotFoundError` → Auto-inserts guild into DB, asks user to retry
 - All other errors → "Something unexpected happened!" + error.jpg
 
 It handles both `ia.response.send_message()` and `ia.followup.send()` (for already-responded interactions).
@@ -198,6 +212,22 @@ Key details:
 - Timezone conversion: UTC → Asia/Hong_Kong (UTC+8)
 - `last_checked_at` prevents re-notifying for already-seen videos
 - Announcement pings `target_role_id` or `@everyone` if not specified
+
+### Translation (`translation.py`)
+
+| Command | Description |
+|---|---|
+| `/translation_setup <emote> <chinese_channel> <english_channel>` (admin) | Configure translation between two channels |
+| `/translation_status` | Show current translation configuration |
+| `/translation_reset` (admin) | Reset translation configuration |
+
+Key details:
+
+- **Trigger mechanism**: Reacting with the configured `trigger_emote` on a message in either channel translates it to the other channel. Replying to a `[TRANSLATION]` bot message continues the chain.
+- **Streaming**: Uses `call_openai_stream()` from `CogBase` — sends an initial message and edits in real-time as chunks arrive, splitting across reply messages when exceeding 2000 characters.
+- **Header format**: `TRANSLATION_HEADER_TEMPLATE.format(chain_id)` → `[TRANSLATION] <8-char-hex>` (defined in `constants.py`). The ack emoji (`ACK_EMOJI` = ✅) prevents duplicate processing.
+- **Direction**: Chinese channel → English, English channel → Traditional Chinese. Reply chains always flip direction (since replies must be in the same channel as the original).
+- **No file forwarding**: Attachments are not forwarded to the target channel.
 
 ---
 
