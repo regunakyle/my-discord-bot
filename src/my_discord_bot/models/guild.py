@@ -18,7 +18,6 @@ class Guild(ModelBase):
     )
     guild_id: Mapped[int] = mapped_column(unique=True)
     guild_name: Mapped[str] = mapped_column(Unicode(100))
-    bot_channel: Mapped[None | int] = mapped_column(default=None)
     welcome_message: Mapped[None | str] = mapped_column(Unicode(2000), default=None)
 
     subscriptions: Mapped[ty.List["Subscription"]] = relationship(

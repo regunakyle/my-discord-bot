@@ -66,16 +66,16 @@ https://www.youtube.com/watch?v={video_id}"""
             for subscription in subscriptions:
                 video_ids: ty.List[str] = []
 
-                if not (
-                    subscription.guild.bot_channel is not None
-                    and (
-                        bot_channel := self.bot.get_channel(
-                            subscription.guild.bot_channel
-                        )
-                    )
+                notification_channel = self.bot.get_channel(
+                    subscription.notification_channel_id
+                )
+                if notification_channel is None or not isinstance(
+                    notification_channel, discord.abc.Messageable
                 ):
                     logger.debug(
-                        f"Bot channel not set for guild {subscription.guild.guild_name}"
+                        "Notification channel %d not found for subscription %s",
+                        subscription.notification_channel_id,
+                        subscription.youtube_channel_id,
                     )
                     continue
 
@@ -143,9 +143,11 @@ https://www.youtube.com/watch?v={video_id}"""
                                 continue
 
                             logger.info(
-                                f"Sending notification of video title: `{video['snippet']['title']}` to {bot_channel.id}"
+                                "Sending notification of video title: `%s` to %d",
+                                video["snippet"]["title"],
+                                notification_channel.id,
                             )
-                            await bot_channel.send(
+                            await notification_channel.send(
                                 MESSAGE_TEMPLATE.format(
                                     role_tag=f"<@&{subscription.announcement_target}>"
                                     if subscription.announcement_target
@@ -176,17 +178,17 @@ https://www.youtube.com/watch?v={video_id}"""
     @discord.app_commands.guild_only()
     @discord.app_commands.describe(
         channel_id="ID of the youtube channel you want to subscribe to",
+        notification_channel="Channel where subscription notifications will be posted",
         target_role_id="Discord role ID that you want to notify; @everyone if not provided",
     )
     async def subscribe(
         self,
         ia: discord.Interaction,
         channel_id: str,
+        notification_channel: discord.app_commands.AppCommandChannel,
         target_role_id: None | str = None,
     ) -> None:
-        """(ADMIN) Subscribe (or unsubscribe) to a Youtube channel. Be notified of upcoming live streams.
-
-        Note: Require bot channel to be set."""
+        """(ADMIN) Subscribe to a Youtube channel. Be notified of upcoming live streams."""
 
         if target_role_id:
             try:
@@ -194,6 +196,23 @@ https://www.youtube.com/watch?v={video_id}"""
             except Exception:
                 await ia.response.send_message("Invalid role id.")
                 return
+
+        # Validate notification channel permissions
+        try:
+            guild_channel = await notification_channel.fetch()
+        except discord.Forbidden:
+            await ia.response.send_message(
+                "ERROR: The bot does not have permission to view that channel.",
+                ephemeral=True,
+            )
+            return
+
+        if not guild_channel.permissions_for(ia.guild.me).send_messages:
+            await ia.response.send_message(
+                "ERROR: The bot needs to have write access to that channel.",
+                ephemeral=True,
+            )
+            return
 
         await ia.response.defer()
 
@@ -203,13 +222,7 @@ https://www.youtube.com/watch?v={video_id}"""
                     await session.execute(
                         select(Guild)
                         .where(Guild.guild_id == ia.guild.id)
-                        .options(
-                            joinedload(
-                                Guild.subscriptions.and_(
-                                    Sub.youtube_channel_id == channel_id
-                                )
-                            )
-                        )
+                        .options(joinedload(Guild.subscriptions))
                     )
                 )
                 .unique()
@@ -219,22 +232,13 @@ https://www.youtube.com/watch?v={video_id}"""
             if guild is None:
                 raise GuildNotFoundError(ia.guild)
 
-            if not guild.bot_channel:
-                await ia.followup.send(
-                    "ERROR: Bot channel not set. Use `/set_bot_channel` first.",
-                    ephemeral=True,
-                )
-                return
-
-            if guild.subscriptions:
-                await session.execute(
-                    delete(Sub).where(Sub.youtube_channel_id == channel_id)
-                )
-                await session.commit()
-                await ia.followup.send(
-                    f"Unsubscribed from `{guild.subscriptions[0].youtube_channel_name}."
-                )
-                return
+            # Check if already subscribed
+            for sub in guild.subscriptions:
+                if sub.youtube_channel_id == channel_id:
+                    await ia.followup.send(
+                        f"Already subscribed to `{sub.youtube_channel_name}`.",
+                    )
+                    return
 
             channel = (
                 self.youtube.channels()
@@ -268,6 +272,7 @@ https://www.youtube.com/watch?v={video_id}"""
                         "relatedPlaylists"
                     ]["uploads"],
                     announcement_target=target_role_id,
+                    notification_channel_id=notification_channel.id,
                 )
             )
 
@@ -276,3 +281,109 @@ https://www.youtube.com/watch?v={video_id}"""
         await ia.followup.send(
             f"Successfully subscribed to `{channel['items'][0]['snippet']['title']}`."
         )
+
+    @discord.app_commands.command()
+    @discord.app_commands.checks.has_permissions(manage_channels=True)
+    @discord.app_commands.guild_only()
+    @discord.app_commands.describe(
+        channel_id="ID of the youtube channel you want to unsubscribe from",
+    )
+    async def unsubscribe(
+        self,
+        ia: discord.Interaction,
+        channel_id: str,
+    ) -> None:
+        """(ADMIN) Unsubscribe from a Youtube channel."""
+        # TODO: Create a interactive interface for user to choose what channel to unsubscribe from
+
+        await ia.response.defer()
+
+        async with self.sessionmaker() as session:
+            guild = (
+                (
+                    await session.execute(
+                        select(Guild)
+                        .where(Guild.guild_id == ia.guild.id)
+                        .options(
+                            joinedload(
+                                Guild.subscriptions.and_(
+                                    Sub.youtube_channel_id == channel_id
+                                )
+                            )
+                        )
+                    )
+                )
+                .unique()
+                .scalar_one_or_none()
+            )
+
+            if guild is None:
+                raise GuildNotFoundError(ia.guild)
+
+            if not guild.subscriptions:
+                await ia.followup.send(
+                    f"Not subscribed to channel `{channel_id}`.",
+                )
+                return
+
+            await session.execute(
+                delete(Sub).where(Sub.youtube_channel_id == channel_id)
+            )
+            await session.commit()
+            await ia.followup.send(
+                f"Unsubscribed from `{guild.subscriptions[0].youtube_channel_name}`."
+            )
+
+    @discord.app_commands.command()
+    @discord.app_commands.guild_only()
+    async def subscription_status(self, ia: discord.Interaction) -> None:
+        """Show the current subscription status of this guild."""
+        await ia.response.defer(ephemeral=True)
+
+        async with self.sessionmaker() as session:
+            guild = (
+                (
+                    await session.execute(
+                        select(Guild)
+                        .where(Guild.guild_id == ia.guild.id)
+                        .options(joinedload(Guild.subscriptions))
+                    )
+                )
+                .unique()
+                .scalar_one_or_none()
+            )
+
+            if guild is None:
+                raise GuildNotFoundError(ia.guild)
+
+            if not guild.subscriptions:
+                await ia.followup.send("No subscriptions in this guild.")
+                return
+
+            embed = discord.Embed(
+                title=f"Subscriptions ({len(guild.subscriptions)})",
+                color=discord.Color.green(),
+            )
+
+            for sub in guild.subscriptions:
+                notification_channel = self.bot.get_channel(sub.notification_channel_id)
+                channel_mention = (
+                    notification_channel.mention
+                    if isinstance(notification_channel, discord.abc.Messageable)
+                    else f"<#{sub.notification_channel_id}>"
+                )
+                target = (
+                    f"<@&{sub.announcement_target}>"
+                    if sub.announcement_target
+                    else "@everyone"
+                )
+
+                embed.add_field(
+                    name=sub.youtube_channel_name,
+                    value=f"Channel ID: `{sub.youtube_channel_id}`\n"
+                    f"Notifications: {channel_mention}\n"
+                    f"Ping: {target}",
+                    inline=False,
+                )
+
+            await ia.followup.send(embed=embed)

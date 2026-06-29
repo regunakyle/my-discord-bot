@@ -74,9 +74,6 @@ class DiscordBot(commands.Bot):
                     Guild(
                         guild_id=guild.id,
                         guild_name=guild.name,
-                        bot_channel=guild.system_channel.id
-                        if guild.system_channel
-                        else None,
                     )
                 )
                 await session.commit()

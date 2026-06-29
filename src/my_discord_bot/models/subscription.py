@@ -1,7 +1,7 @@
 import datetime as dt
 import typing as ty
 
-from sqlalchemy import ForeignKey, Identity, String, Unicode
+from sqlalchemy import ForeignKey, Identity, String, Unicode, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ._model_base import ModelBase
@@ -23,9 +23,10 @@ class Subscription(ModelBase):
         )
     )
     youtube_channel_name: Mapped[str] = mapped_column(Unicode(100))
-    youtube_channel_id: Mapped[str] = mapped_column(String(50), unique=True)
+    youtube_channel_id: Mapped[str] = mapped_column(String(50))
     youtube_upload_playlist: Mapped[str] = mapped_column(String(50))
     announcement_target: Mapped[None | str] = mapped_column(String(50), default=None)
+    notification_channel_id: Mapped[int] = mapped_column()
     last_checked_at: Mapped[dt.datetime] = mapped_column(
         default=lambda: dt.datetime.now(dt.UTC)
     )
@@ -34,3 +35,5 @@ class Subscription(ModelBase):
         back_populates="subscriptions",
         lazy="raise",
     )
+
+    __table_args__ = (UniqueConstraint("guild_id", "youtube_channel_id"),)

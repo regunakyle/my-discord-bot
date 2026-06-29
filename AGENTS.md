@@ -7,6 +7,7 @@
 A personal Discord bot written in **Python 3.13** using **discord.py** with slash commands. Data is persisted in **SQLite3** via **SQLAlchemy (async)** with **Alembic** migrations. The bot is deployable both natively and via **Docker Compose** (with a bundled Lavalink music node).
 
 - **Package name**: `my-discord-bot` (in `src/my_discord_bot/`)
+- **Version**: `5.1.0`
 - **Build system**: hatchling + `uv` for dependency management
 - **License**: GPL-3.0
 - **Repository**: `github.com/regunakyle/my-discord-bot`
@@ -28,7 +29,7 @@ src/my_discord_bot/
 │   ├── _cog_base.py     # CogBase mixin + check_cooldown_factory
 │   ├── error_handler.py # Global error handler
 │   ├── general.py       # /hello, /pixiv
-│   ├── meta.py          # >>sync, /help, /set_bot_channel, /set_welcome_message, /version
+│   ├── meta.py          # >>sync, /help, /set_welcome_message, /version
 │   ├── ai.py            # /chat (OpenAI)
 │   ├── music.py         # /play, /quit, /queue, /pause, /loop, /skip (Lavalink)
 │   ├── subscription.py  # /subscribe + background YouTube live checker
@@ -43,6 +44,9 @@ src/my_discord_bot/
 migrations/              # Alembic migrations (sqlite:///volume/db.sqlite3)
 volume/                  # Runtime data (db.sqlite3, logs/, gallery-dl/) — gitignored
 assets/images/           # Static images (hello.jpg, error.jpg, music.png)
+compose.yaml             # Docker Compose configuration (discordbot + lavalink services)
+Dockerfile               # Multi-stage Docker build with uv + ffmpeg
+init.sh                  # Docker build helper (downloads ffmpeg, runs uv sync)
 ```
 
 ---
@@ -69,7 +73,7 @@ assets/images/           # Static images (hello.jpg, error.jpg, music.png)
 - **`setup_hook()`**: Conditionally loads cogs based on env vars (see [Cog Loading](#cog-loading))
 - **`on_guild_join()`**: Inserts guild into DB, sends welcome message in system channel
 - **`on_guild_remove()`**: Deletes guild from DB
-- **`on_member_join()`**: Sends welcome message if configured
+- **`on_member_join()`**: Looks up guild in DB (creates if missing), sends welcome message if configured
 - **`on_app_command_completion()`**: Logs all slash command invocations
 
 ### Cog Loading
@@ -97,25 +101,34 @@ All cogs inherit from `CogBase(commands.Cog)`:
 
 - Constructor takes `bot: commands.Bot` and `sessionmaker: async_sessionmaker[AsyncSession]`
 - Provides `self.bot` and `self.sessionmaker` to all cogs
-- `get_max_file_size(guild)` — returns Discord's upload limit capped by `MAX_FILE_SIZE` env var, based on guild Nitro level
+- Creates `self.client = openai.AsyncOpenAI()` for streaming chat completions
+- Stores `self.model_name` from `OPENAI_MODEL_NAME` env var (used by both AI and Translation cogs)
+- Stores `self.max_file_size` from `MAX_FILE_SIZE` env var (default `25` MiB)
+- `get_max_file_size(guild)` — returns Discord's upload limit capped by `MAX_FILE_SIZE` env var, based on guild Nitro level:
+  - Nitro level < 7 (Level 1 or lower): 25 MiB
+  - Nitro level < 14 (Level 2): 50 MiB
+  - Nitro level >= 14 (Level 3): 100 MiB
+  - Returns `10` if `guild` is `None`
+- `call_openai_stream(messages)` — async generator that streams OpenAI chat completions via `client.chat.completions.create()`. Uses `extra_body={"chat_template_kwargs": {"enable_thinking": False}}`.
 - `check_cooldown_factory(seconds)` — returns a dynamic cooldown check that **exempts the bot owner**
 
 ### Database Models
 
 **`Guild`** (`models/guild.py`):
 
-- `id` (auto-increment PK), `guild_id` (unique Discord snowflake), `guild_name`, `bot_channel` (nullable channel ID), `welcome_message` (nullable, max 2000 chars)
-- Relationship: `subscriptions` (one-to-many, `lazy="raise"`, cascade delete)
-- Relationship: `translation` (one-to-zero-or-one, `lazy="raise"`, cascade delete)
+- `id` (auto-increment PK), `guild_id` (unique Discord snowflake), `guild_name` (Unicode(100)), `welcome_message` (nullable, Unicode(2000))
+- Relationship: `subscriptions` (one-to-many, `lazy="raise"`, cascade `save-update, merge, delete`)
+- Relationship: `translation` (one-to-zero-or-one, `lazy="raise"`, cascade `save-update, merge, delete`)
 
 **`Subscription`** (`models/subscription.py`):
 
-- `id` (auto-increment PK), `guild_id` (FK → guild.id, cascade delete), `youtube_channel_name`, `youtube_channel_id` (unique), `youtube_upload_playlist`, `announcement_target` (nullable role ID string), `last_checked_at`
+- `id` (auto-increment PK), `guild_id` (FK → guild.id, cascade delete), `youtube_channel_name` (Unicode(100)), `youtube_channel_id` (String(50), composite unique with `guild_id`), `youtube_upload_playlist` (String(50)), `announcement_target` (nullable String(50), role ID), `notification_channel_id` (int, required, per-subscription), `last_checked_at` (datetime, default UTC now)
+- Composite unique constraint on `(guild_id, youtube_channel_id)` — allows multiple guilds to subscribe to the same YouTube channel
 - Relationship: `guild` (many-to-one, `lazy="raise"`)
 
 **`Translation`** (`models/translation.py`):
 
-- `id` (auto-increment PK), `guild_id` (FK → guild.id, unique, cascade delete), `trigger_emote`, `chinese_channel_id`, `english_channel_id`
+- `id` (auto-increment PK), `guild_id` (FK → guild.id, unique, cascade delete), `trigger_emote` (Unicode(50)), `english_channel_id` (int)
 - Relationship: `guild` (many-to-one, `lazy="raise"`)
 
 **Adding a new model**:
@@ -127,14 +140,14 @@ All cogs inherit from `CogBase(commands.Cog)`:
 
 ### Global Error Handling (`error_handler.py`)
 
-`ErrorHandler` cog registers `self.bot.tree.on_error = self.on_app_command_error` in its constructor. It catches:
+`ErrorHandler` cog registers `self.bot.tree.on_error = self.on_app_command_error` in its constructor. All error messages are sent as **ephemeral**. It catches:
 
-- `MissingPermissions` → "You don't have the required permission!"
-- `NoPrivateMessage` → "This command is only available inside a server!"
+- `MissingPermissions` → "ERROR: You don't have the required permission!"
+- `NoPrivateMessage` → "ERROR: This command is only available inside a server!"
 - `CommandOnCooldown` → Shows cooldown message
-- `CommandInvokeError` with error code 40005 → File too large message
+- `CommandInvokeError` with "error code: 40005" → File too large message with actual max size
 - `CommandInvokeError` wrapping `GuildNotFoundError` → Auto-inserts guild into DB, asks user to retry
-- All other errors → "Something unexpected happened!" + error.jpg
+- All other errors → "ERROR: Something unexpected happened!" + error.jpg
 
 It handles both `ia.response.send_message()` and `ia.followup.send()` (for already-responded interactions).
 
@@ -147,87 +160,111 @@ It handles both `ia.response.send_message()` and `ia.followup.send()` (for alrea
 | Command | Description |
 |---|---|
 | `/hello` | Sends `assets/images/hello.jpg` |
-| `/pixiv [pixiv_link] <image_number> <animation_format>` | Downloads Pixiv images via `gallery-dl`. Requires ffmpeg + OAuth token. 3-second cooldown. Guild-only. Supports `webm`/`gif` animation format. |
+| `/pixiv [pixiv_link] <image_number> <animation_format>` | Downloads Pixiv images via `gallery-dl`. 3-second cooldown. Guild-only. |
 
 Key details:
 
 - Uses `gallery-dl` library directly (config + `DownloadJob`)
+- Validates URL with regex `(www\.pixiv\.net\/(?:en\/)?artworks\/\d+)`
 - Max file size respects guild Nitro level + `MAX_FILE_SIZE` env var
 - Defer response (up to 15 min processing time)
+- Sends embed with source link + downloaded file
+- Error handling by status code:
+  - `4` (HttpError): Image too big
+  - `8` (NotFoundError): Invalid link
+  - `16` (AuthenticationError): No OAuth token configured
+  - Other: Generic error
 
 ### Meta (`meta.py`)
 
 | Command | Description |
 |---|---|
-| `>>sync` (hybrid, owner-only) | Re-syncs slash commands globally + syncs guild DB records |
-| `/help <command_name>` | Lists all commands or details for a specific command |
-| `/set_bot_channel` (admin) | Sets/unsets current channel as bot notification channel |
-| `/set_welcome_message` (admin) | Sets welcome message for new members (supports `\n`, `<#channel>`, `<@user>`, `<a:emoji:id>`) |
-| `/version` | Reports bot version (checks `APP_VERSION` env → git branch → pyproject.toml) |
+| `>>sync` (hybrid, owner-only) | Re-syncs slash commands globally + syncs guild DB records (deletes stale guilds, inserts current ones) |
+| `/help <command_name>` | Lists all commands grouped by cog, or details for a specific command |
+| `/set_welcome_message [message]` (admin) | Sets welcome message for new members (max 2000 chars). Supports `\n`, `<#channel>`, `<@user>`, `<a:emoji:id>`. Unescapes `\n` via `unicode-escape` codec. |
+| `/version` | Reports bot version (checks `APP_VERSION` env → git branch+hash → pyproject.toml) |
 
 ### AI (`ai.py`)
 
 | Command | Description |
 |---|---|
-| `/chat [message]` | Sends message to OpenAI-compatible API. 1.5-second cooldown. Guild-only. |
+| `/chat [message]` | Streams a response from OpenAI-compatible API. 1.5-second cooldown. Guild-only. |
 
 Key details:
 
-- Uses `openai.AsyncOpenAI()` client
+- Uses `call_openai_stream()` from `CogBase` (chat.completions streaming API)
+- Sends "Thinking..." initially, edits in real-time with 1-second intervals
+- Splits across reply messages when exceeding 2000 characters per message
+- Falls back to "ERROR: OpenAI API call failed." if no text received
+- Sends a single user message `{"role": "user", "content": message}` to the API
 - Model name from `OPENAI_MODEL_NAME` env var
 - Base URL from `OPENAI_BASE_URL` env var (if empty, uses official OpenAI endpoint; the env var is deleted in `setup_hook` if empty)
-- Uses `client.responses.create()` API with a `brave_search` function tool
-- Response truncated to 2000 chars per message (splits into multiple messages if longer)
 
 ### Music (`music.py`)
 
 | Command | Description |
 |---|---|
-| `/play [query]` | Searches and enqueues a track (YouTube via Lavalink) |
+| `/play [query]` | Searches and enqueues a track (YouTube via Lavalink). Handles playlists. |
 | `/quit` | Clears queue, stops playback, disconnects from voice |
-| `/queue` | Shows current queue (max 20 tracks displayed) |
+| `/queue` | Shows current queue (max 20 tracks displayed). Includes currently playing, queue size, paused state, looping state. |
 | `/pause` | Toggle pause/resume |
 | `/loop` | Toggle single-track loop |
 | `/skip` | Skip current track (also cancels loop) |
 
 Key details:
 
-- Uses `lavalink` library (v5.x) with custom `LavalinkVoiceClient(discord.VoiceProtocol)`
+- Uses `lavalink` library (v5.11.0) with custom `LavalinkVoiceClient(discord.VoiceProtocol)`
 - `create_player_check` — shared pre-command check that validates voice channel state, permissions, and creates Lavalink player
 - Lavalink client stored on `bot.lavalink` (dynamic attribute)
 - Background task `leave_inactive_voice_channel_task` (1-min loop): disconnects if no non-bot users in voice channel
 - Event hooks: `TrackStartEvent`, `QueueEndEvent`, `TrackLoadFailedEvent`, `NodeReadyEvent`, `NodeDisconnectedEvent`
 - Query prefix `ytsearch:` auto-added for non-URL queries
+- `/play` handles `LoadType.EMPTY`, `LoadType.PLAYLIST`, and single track enqueuing
 
 ### Subscription (`subscription.py`)
 
 | Command | Description |
 |---|---|
-| `/subscribe [channel_id] <target_role_id>` (admin) | Subscribe/unsubscribe to YouTube channel for live stream notifications |
+| `/subscribe [channel_id] [notification_channel] <target_role_id>` (admin) | Subscribe/unsubscribe to YouTube channel for live stream notifications. Notification channel is required and stored per-subscription. |
 
 Key details:
 
 - Uses `googleapiclient.discovery.build("youtube", "v3")` with `GOOGLE_API_KEY`
-- Background task `check_subscription` (15-min loop): polls YouTube playlist items for new uploads, checks if they are scheduled live streams, posts announcement to bot channel
-- Timezone conversion: UTC → Asia/Hong_Kong (UTC+8)
-- `last_checked_at` prevents re-notifying for already-seen videos
+- Validates bot has `send_messages` permission on the notification channel before subscribing
+- Background task `check_subscription` (15-min loop): polls YouTube playlist items (max 50) for new uploads published after `last_checked_at`, filters for scheduled live streams (has `scheduledStartTime` but no `actualStartTime`), posts announcement to the subscription's `notification_channel_id`
+- Uses Discord timestamp format `<t:{unix_timestamp}:F>` for scheduled start time
+- `last_checked_at` updated to current UTC time after each check
 - Announcement pings `target_role_id` or `@everyone` if not specified
+- Before loop: waits for bot ready
 
 ### Translation (`translation.py`)
 
 | Command | Description |
 |---|---|
-| `/translation_setup <emote> <chinese_channel> <english_channel>` (admin) | Configure translation between two channels |
+| `/translation_setup [emote] [english_channel]` (admin) | Configure translation with trigger emote and English channel |
 | `/translation_status` | Show current translation configuration |
 | `/translation_reset` (admin) | Reset translation configuration |
 
 Key details:
 
-- **Trigger mechanism**: Reacting with the configured `trigger_emote` on a message in either channel translates it to the other channel. Replying to a `[TRANSLATION]` bot message continues the chain.
-- **Streaming**: Uses `call_openai_stream()` from `CogBase` — sends an initial message and edits in real-time as chunks arrive, splitting across reply messages when exceeding 2000 characters.
-- **Header format**: `TRANSLATION_HEADER_TEMPLATE.format(chain_id)` → `[TRANSLATION] <8-char-hex>` (defined in `constants.py`). The ack emoji (`ACK_EMOJI` = ✅) prevents duplicate processing.
-- **Direction**: Chinese channel → English, English channel → Traditional Chinese. Reply chains always flip direction (since replies must be in the same channel as the original).
+- **Trigger mechanism**: Reacting with the configured `trigger_emote` on a message in a non-English channel translates it to the English channel. Replying to a `[TRANSLATION]` bot message continues the chain.
+- **Streaming**: Uses `_stream_translate()` → `call_openai_stream()` from `CogBase`. Sends an initial "Translating..." message and edits in real-time as chunks arrive, splitting across reply messages when exceeding 2000 characters (accounting for header overhead).
+- **Header format**: `"[TRANSLATION] {chain_id} | <#{source_channel_id}> | {user_name}"` (8-char hex chain ID + source channel mention + original user name). The ack emoji (`ACK_EMOJI` = ✅) prevents duplicate processing.
+- **Direction**: Non-English channel → English (via reaction), English channel reply → Traditional Chinese, source channel reply → English. Direction is determined dynamically based on which channel the reply is in.
 - **No file forwarding**: Attachments are not forwarded to the target channel.
+- Module-level helpers: `_build_header()`, `_parse_header()`, `_CHANNEL_ID_RE` regex
+
+---
+
+## Constants (`constants.py`)
+
+| Constant | Value | Used By |
+|---|---|---|
+| `ACK_EMOJI` | `"✅"` | Translation cog (duplicate detection) |
+| `TRANSLATION_HEADER_PREFIX` | `"[TRANSLATION] "` | Translation cog (header detection) |
+| `TRANSLATION_HEADER_TEMPLATE` | `"[TRANSLATION] {0} | <#{1}> | {2}"` | Translation cog (header formatting) |
+| `DISCORD_MAX_MESSAGE_LENGTH` | `2000` | AI + Translation cogs (message splitting) |
+| `STREAM_EDIT_INTERVAL` | `1.0` | AI + Translation cogs (edit throttle in seconds) |
 
 ---
 
@@ -238,11 +275,11 @@ Key details:
 | `DISCORD_TOKEN` | **Yes** | Bot token |
 | `PREFIX` | **Yes** | Command prefix (default `>>`); currently only used by `>>sync` |
 | `LOG_LEVEL` | No | `DEBUG`, `INFO`, `WARNING`, etc. (default `INFO`) |
-| `MAX_FILE_SIZE` | No | Max upload size in MiB (default `10`) |
+| `MAX_FILE_SIZE` | No | Max upload size in MiB (default `25` in code, `.env.example` shows `10`) |
 | `LAVALINK_URL` | No* | Lavalink server URL (e.g., `http://localhost:2333`) |
 | `LAVALINK_PASSWORD` | No* | Lavalink password (default `youshallnotpass`) |
 | `OPENAI_API_KEY` | No* | OpenAI API key (or any string for custom endpoints) |
-| `OPENAI_MODEL_NAME` | No* | Model name (default `gpt-3.5-turbo`) |
+| `OPENAI_MODEL_NAME` | No* | Model name (default `gpt-3.5-turbo` in `.env.example`) |
 | `OPENAI_BASE_URL` | No | Custom OpenAI-compatible endpoint (empty = official) |
 | `GOOGLE_API_KEY` | No* | Google API key for YouTube Data API v3 |
 | `APP_VERSION` | No | Set during Docker build; overrides version reporting |
@@ -299,9 +336,16 @@ docker compose up -d
 
 The Dockerfile uses a multi-stage build with `uv` for dependency installation and downloads ffmpeg from BtbN builds. The container runs as non-root user (UID 10001).
 
+The `compose.yaml` file defines two services:
+
+- **discordbot**: The bot itself, using `regunakyle/my-discord-bot:latest`
+- **lavalink**: Lavalink music node with youtube-source plugin (v1.18.0) using OAuth
+
+Named volume `discord-bot-vol` is mounted at `/app/volume`.
+
 ### CI/CD
 
-GitHub Actions (`.github/workflows/docker.yaml`) builds and pushes to Docker Hub on pushes to `master` (tag: `latest`) and `dev` (tag: `dev`).
+GitHub Actions (`.github/workflows/docker.yaml`) builds and pushes to Docker Hub on pushes to `master` (tag: `latest`) and `dev` (tag: branch name). `APP_VERSION` is set from pyproject.toml version (master) or git short hash (dev).
 
 ### After Updates
 
@@ -311,7 +355,6 @@ Always run `>>sync` in Discord after deploying updates to re-register slash comm
 
 ## TODO / Known Issues
 
-1. **Streaming AI responses** — `/chat` should stream chunks instead of sending full response
-2. **Queue pagination** — `/queue` shows max 20 tracks without pagination
-3. **Subscription pageToken** — YouTube API pagination not handled (>50 videos)
-4. **Potential connection failures** — Not handled gracefully in `subscription.py` and `music.py`
+1. **Queue pagination** — `/queue` shows max 20 tracks without pagination
+2. **Subscription pageToken** — YouTube API pagination not handled (>50 videos)
+3. **Potential connection failures** — Not handled gracefully in `subscription.py` and `music.py` (marked with `# TODO` comments)
