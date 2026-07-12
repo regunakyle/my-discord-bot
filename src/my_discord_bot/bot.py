@@ -47,17 +47,25 @@ class DiscordBot(commands.Bot):
                 len(os.getenv("OPENAI_API_KEY", ""))
                 and len(os.getenv("OPENAI_MODEL_NAME", ""))
             ):
+                logger.warning(
+                    "Skipping AI cog: OPENAI_API_KEY and/or OPENAI_MODEL_NAME not set"
+                )
                 continue
             if cog.__name__ == "Music" and not len(os.getenv("LAVALINK_URL", "")):
+                logger.warning("Skipping Music cog: LAVALINK_URL not set")
                 continue
             if cog.__name__ == "Subscription" and not len(
                 os.getenv("GOOGLE_API_KEY", "")
             ):
+                logger.warning("Skipping Subscription cog: GOOGLE_API_KEY not set")
                 continue
             if cog.__name__ == "Translation" and not (
                 len(os.getenv("OPENAI_API_KEY", ""))
                 and len(os.getenv("OPENAI_MODEL_NAME", ""))
             ):
+                logger.warning(
+                    "Skipping Translation cog: OPENAI_API_KEY and/or OPENAI_MODEL_NAME not set"
+                )
                 continue
 
             await self.add_cog(cog(self, self.sessionmaker))

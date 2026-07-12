@@ -141,7 +141,19 @@ class Translation(CogBase):
         if full_text:
             block_start = current_block * available_length
             block_text = full_text[block_start : block_start + available_length]
-            await current_message.edit(content=_build_content(block_text))
+            if block_text:
+                await current_message.edit(content=_build_content(block_text))
+            else:
+                # Empty block (stream ended exactly at a boundary) — delete it
+                logger.debug(
+                    "Empty trailing block at boundary (total=%d, block=%d), deleting message",
+                    len(full_text),
+                    current_block,
+                )
+                try:
+                    await current_message.delete()
+                except discord.HTTPException:
+                    pass
         else:
             await current_message.edit(
                 content=f"{header}\nTranslation failed. Please try again later."

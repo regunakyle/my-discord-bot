@@ -90,6 +90,18 @@ class AI(CogBase):
             block_text = full_text[
                 block_start : block_start + DISCORD_MAX_MESSAGE_LENGTH
             ]
-            await current_message.edit(content=block_text)
+            if block_text:
+                await current_message.edit(content=block_text)
+            else:
+                # Empty block (stream ended exactly at a boundary) — delete it
+                logger.debug(
+                    "Empty trailing block at boundary (total=%d, block=%d), deleting message",
+                    len(full_text),
+                    current_block,
+                )
+                try:
+                    await current_message.delete()
+                except discord.HTTPException:
+                    pass
         else:
             await current_message.edit(content="ERROR: OpenAI API call failed.")
