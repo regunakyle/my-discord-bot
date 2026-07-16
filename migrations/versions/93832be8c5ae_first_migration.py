@@ -29,11 +29,20 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("guild_id", sa.Integer(), nullable=False),
-        sa.Column("guild_name", sa.Unicode(length=100), nullable=False),
+        sa.Column(
+            "guild_name",
+            sa.Unicode(length=100).with_variant(sa.TEXT(), "sqlite"),
+            nullable=False,
+        ),
         sa.Column("bot_channel", sa.Integer(), nullable=True),
-        sa.Column("welcome_message", sa.Unicode(length=2000), nullable=True),
+        sa.Column(
+            "welcome_message",
+            sa.Unicode(length=2000).with_variant(sa.TEXT(), "sqlite"),
+            nullable=True,
+        ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_guild")),
         sa.UniqueConstraint("guild_id", name=op.f("uq_guild_guild_id")),
+        sqlite_strict=True,
     )
     # ### end Alembic commands ###
 

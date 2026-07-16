@@ -29,11 +29,31 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("guild_id", sa.Integer(), nullable=False),
-        sa.Column("youtube_channel_name", sa.Unicode(length=100), nullable=False),
-        sa.Column("youtube_channel_id", sa.String(length=50), nullable=False),
-        sa.Column("youtube_upload_playlist", sa.String(length=50), nullable=False),
-        sa.Column("announcement_target", sa.String(length=50), nullable=True),
-        sa.Column("last_checked_at", sa.DateTime(), nullable=False),
+        sa.Column(
+            "youtube_channel_name",
+            sa.Unicode(length=100).with_variant(sa.TEXT, "sqlite"),
+            nullable=False,
+        ),
+        sa.Column(
+            "youtube_channel_id",
+            sa.String(length=50).with_variant(sa.TEXT(), "sqlite"),
+            nullable=False,
+        ),
+        sa.Column(
+            "youtube_upload_playlist",
+            sa.String(length=50).with_variant(sa.TEXT(), "sqlite"),
+            nullable=False,
+        ),
+        sa.Column(
+            "announcement_target",
+            sa.String(length=50).with_variant(sa.TEXT(), "sqlite"),
+            nullable=True,
+        ),
+        sa.Column(
+            "last_checked_at",
+            sa.DateTime().with_variant(sa.TEXT(), "sqlite"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(
             ["guild_id"],
             ["guild.id"],
@@ -44,6 +64,7 @@ def upgrade() -> None:
         sa.UniqueConstraint(
             "youtube_channel_id", name=op.f("uq_subscription_youtube_channel_id")
         ),
+        sqlite_strict=True,
     )
     # ### end Alembic commands ###
 

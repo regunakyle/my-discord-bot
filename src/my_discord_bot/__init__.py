@@ -73,6 +73,8 @@ async def entrypoint() -> None:
         """If using SQLite, enable foreign key constraints."""
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.close()
 
     async_session = async_sessionmaker(engine, expire_on_commit=False)
