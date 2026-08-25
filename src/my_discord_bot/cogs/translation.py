@@ -111,7 +111,7 @@ class Translation(CogBase):
                     # Finalize the current block on the active message
                     block_start = current_block * available_length
                     block_text = full_text[block_start : block_start + available_length]
-                    if block_text:
+                    if block_text.strip():
                         await current_message.edit(content=_build_content(block_text))
 
                     # Send a new reply message for the next block (also with header)
@@ -128,7 +128,7 @@ class Translation(CogBase):
                 if now - last_edit_time >= STREAM_EDIT_INTERVAL:
                     block_start = current_block * available_length
                     block_text = full_text[block_start : block_start + available_length]
-                    if block_text:
+                    if block_text.strip():
                         await current_message.edit(content=_build_content(block_text))
                         last_edit_time = now
         except Exception:
@@ -140,13 +140,13 @@ class Translation(CogBase):
             len(full_text),
             current_block + 1,
         )
-        if full_text:
+        if full_text.strip():
             block_start = current_block * available_length
             block_text = full_text[block_start : block_start + available_length]
-            if block_text:
+            if block_text.strip():
                 await current_message.edit(content=_build_content(block_text))
             else:
-                # Empty block (stream ended exactly at a boundary) — delete it
+                # Empty or whitespace-only block (stream ended exactly at a boundary) — delete it
                 logger.debug(
                     "Empty trailing block at boundary (total=%d, block=%d), deleting message",
                     len(full_text),
