@@ -56,7 +56,8 @@ class AI(CogBase):
                     block_text = full_text[
                         block_start : block_start + DISCORD_MAX_MESSAGE_LENGTH
                     ]
-                    await current_message.edit(content=block_text)
+                    if block_text:
+                        await current_message.edit(content=block_text)
 
                     # Send a new reply message for the next block
                     current_message: discord.Message = await ty.cast(
@@ -73,8 +74,9 @@ class AI(CogBase):
                     block_text = full_text[
                         block_start : block_start + DISCORD_MAX_MESSAGE_LENGTH
                     ]
-                    await current_message.edit(content=block_text)
-                    last_edit_time = now
+                    if block_text:
+                        await current_message.edit(content=block_text)
+                        last_edit_time = now
         except Exception:
             # If streaming failed mid-way, fall through to send whatever we have
             logger.error("Error during chat", exc_info=True)

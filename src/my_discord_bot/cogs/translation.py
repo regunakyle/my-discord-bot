@@ -111,7 +111,8 @@ class Translation(CogBase):
                     # Finalize the current block on the active message
                     block_start = current_block * available_length
                     block_text = full_text[block_start : block_start + available_length]
-                    await current_message.edit(content=_build_content(block_text))
+                    if block_text:
+                        await current_message.edit(content=_build_content(block_text))
 
                     # Send a new reply message for the next block (also with header)
                     current_message = await ty.cast(
@@ -127,8 +128,9 @@ class Translation(CogBase):
                 if now - last_edit_time >= STREAM_EDIT_INTERVAL:
                     block_start = current_block * available_length
                     block_text = full_text[block_start : block_start + available_length]
-                    await current_message.edit(content=_build_content(block_text))
-                    last_edit_time = now
+                    if block_text:
+                        await current_message.edit(content=_build_content(block_text))
+                        last_edit_time = now
         except Exception:
             logger.error("Error during translation", exc_info=True)
 
